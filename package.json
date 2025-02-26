@@ -1,0 +1,51 @@
+{
+  "name": "chai-frontend",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Web frontend for the Chai chat app",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "lint": "eslint .",
+    "preview": "vite preview"
+  },
+  "keywords": [
+    "vite",
+    "react",
+    "typescript"
+  ],
+  "author": "AdrianDevs",
+  "license": "ISC",
+  "validate-branch-name": {
+    "pattern": "^(master|main|develop){1}$|^(feature|fix|hotfix|release|text|experimental)/.+$",
+    "errorMsg": "Branch name validation failed"
+  },
+  "dependencies": {
+    "@tailwindcss/vite": "^4.0.8",
+    "@tanstack/react-router": "^1.111.7",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "tailwindcss": "^4.0.8"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.19.0",
+    "@tanstack/config": "^0.16.3",
+    "@tanstack/router-devtools": "^1.111.7",
+    "@tanstack/router-plugin": "^1.111.7",
+    "@types/react": "^19.0.8",
+    "@types/react-dom": "^19.0.3",
+    "@vitejs/plugin-react-swc": "^3.5.0",
+    "daisyui": "^5.0.0-beta.8",
+    "eslint": "^9.19.0",
+    "eslint-plugin-react": "^7.37.4",
+    "eslint-plugin-react-hooks": "^5.0.0",
+    "eslint-plugin-react-refresh": "^0.4.18",
+    "globals": "^15.14.0",
+    "prettier": "^3.5.2",
+    "prettier-plugin-tailwindcss": "^0.6.11",
+    "typescript": "~5.7.2",
+    "typescript-eslint": "^8.22.0",
+    "vite": "^6.1.0"
+  }
+}
