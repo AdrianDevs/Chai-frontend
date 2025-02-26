@@ -10,7 +10,6 @@ export default defineConfig({
       target: 'react',
       autoCodeSplitting: true,
     }),
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-call
     tailwindcss(),
     react(),
   ],

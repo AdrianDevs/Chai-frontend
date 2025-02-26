@@ -8,7 +8,7 @@ import { tanstackConfig } from '@tanstack/config/eslint';
 
 export default tseslint.config(
   ...tanstackConfig,
-  { ignores: ['dist', 'eslint.config.js'] },
+  { ignores: ['dist', 'eslint.config.js', 'commitlint.config.mjs'] },
   {
     extends: [
       js.configs.recommended,

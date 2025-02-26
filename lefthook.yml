@@ -1,0 +1,78 @@
+pre-commit:
+  parallel: true
+  commands:
+    format:
+      run: npm run format
+    lint:
+      # glob: '*.{js,ts,jsx,tsx}' # glob filter for list of files
+      run: npm run lint
+    types:
+      # glob: '*.{js,ts, jsx, tsx}'
+      run: npm run typecheck
+    gitLeaks:
+      run: npm run gitleaks
+    # TODO add unit and e2e tests
+    # test:
+    #   run: npm run test:related {staged_files}
+pre-push:
+  parallel: true
+  commands:
+    branchName:
+      run: npx validate-branch-name
+    # packages-audit:
+    #   tags: frontend security
+    #   run: npm audit
+commit-msg:
+  parallel: true
+  scripts:
+    'commitlint.sh':
+      runner: bash
+
+  # commands:
+  #   commitlint:
+  #     run: npx commitlint --from=HEAD --verbose --color
+  # scripts:
+  #   'commitlint.sh':
+  #     runner: bash
+# EXAMPLE USAGE:
+#
+#   Refer for explanation to following link:
+#   https://lefthook.dev/configuration/
+#
+# pre-push:
+#   jobs:
+#     - name: packages audit
+#       tags:
+#         - frontend
+#         - security
+#       run: yarn audit
+#
+#     - name: gems audit
+#       tags:
+#         - backend
+#         - security
+#       run: bundle audit
+#
+# pre-commit:
+#   parallel: true
+#   jobs:
+#     - run: yarn eslint {staged_files}
+#       glob: "*.{js,ts,jsx,tsx}"
+#
+#     - name: rubocop
+#       glob: "*.rb"
+#       exclude:
+#         - config/application.rb
+#         - config/routes.rb
+#       run: bundle exec rubocop --force-exclusion {all_files}
+#
+#     - name: govet
+#       files: git ls-files -m
+#       glob: "*.go"
+#       run: go vet {files}
+#
+#     - script: "hello.js"
+#       runner: node
+#
+#     - script: "hello.go"
+#       runner: go run
