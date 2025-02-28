@@ -83,9 +83,9 @@ $ make up
 
 ## Frontend
 
-- Built with `Vite`, `React`, and `TypeScipt`
+- Built with `Vite`, `React`, and `TypeScript`
 - Styling with `Tailwind`
-- Components with `Mantine`
+- Components with `DaisyUI`
 - Routing with `Tanstack Router`
 - State management with `Tanstack Query` and `Tanstack Store`
 - Forms with `Tanstack Forms` and `Zod`
@@ -100,3 +100,8 @@ $ make up
 
 - CI/CD with GitHub Actions [TODO]
 - AWS Cloudfront, API Gateway, ECS (Fargate), RDS, S3, Terraform [TODO]
+
+## TODO
+
+- Error page
+- Page not found
