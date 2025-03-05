@@ -1,23 +1,17 @@
-import ApiMethods from './endpoints';
-import type { Info } from './types';
+import ApiMethods from './apiMethods';
+import type { Conversation, Info } from './types';
 
 const ENDPOINTS = {
   INFO: () => '/info',
   SIGNUP: () => '/auth/signup',
   LOGIN: () => '/auth/login',
+  VALIDATE_USERNAME: (username: string) =>
+    `/users/validate/?username=${username}`,
+  USERS_BY_USERNAMES: (usernames: Array<string>) =>
+    `/users?usernames=${usernames.join(',')}`,
 };
 
 class API {
-  private static accessToken: string | null = null;
-
-  static setAccessToken = (token: string) => {
-    API.accessToken = token;
-  };
-
-  static getAccessToken = () => {
-    return API.accessToken;
-  };
-
   static fetchInfo = () => {
     const url = ENDPOINTS.INFO();
     return ApiMethods.get<Info>(url);
@@ -41,6 +35,21 @@ class API {
       token: string;
       expiresIn: string;
     }>(url, { username, password });
+  };
+
+  static validateUsername = (username: string) => {
+    const url = ENDPOINTS.VALIDATE_USERNAME(username);
+    return ApiMethods.get<{ status: 'available' | 'taken' }>(url);
+  };
+
+  static fetchUsersByUsernames = (usernames: Array<string>) => {
+    const url = ENDPOINTS.USERS_BY_USERNAMES(usernames);
+    return ApiMethods.get<Array<{ id: number; username: string }>>(url);
+  };
+
+  static fetchConversations = () => {
+    const url = '/conversations';
+    return ApiMethods.get<Array<Conversation>>(url);
   };
 
   // static loadSurveys = () => {

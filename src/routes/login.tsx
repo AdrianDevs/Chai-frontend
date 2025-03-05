@@ -6,36 +6,29 @@ import {
   useNavigate,
   useRouter,
 } from '@tanstack/react-router';
+import { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
-import type { AnyFieldApi } from '@tanstack/react-form';
+import { FieldInfo } from '../components/fieldInfo';
+import Title from '../components/title';
+import type { CustomError } from '../types/error';
 
-const fallbacke = '/';
+const fallback = '/';
 
 export const Route = createFileRoute('/login')({
   beforeLoad: ({ context }) => {
     if (context.auth?.isAuthenticated) {
       console.log('Login.beforeload: Redirecting to fallback');
-      redirect({ to: fallbacke, throw: true });
+      redirect({ to: fallback, throw: true });
     }
   },
   component: LoginComponent,
 });
 
-function FieldInfo({ field }: { field: AnyFieldApi }) {
-  return (
-    <>
-      {field.state.meta.isTouched && field.state.meta.errors.length ? (
-        <em>{field.state.meta.errors.join(',')}</em>
-      ) : null}
-      {field.state.meta.isValidating ? 'Validating...' : null}
-    </>
-  );
-}
-
 function LoginComponent() {
   const auth = useAuth();
   const router = useRouter();
   const navigate = useNavigate({ from: '/signup' });
+  const [error, setError] = useState<CustomError | null>(null);
 
   const form = useForm({
     defaultValues: {
@@ -48,118 +41,152 @@ function LoginComponent() {
       try {
         await auth.login(values.value.username, values.value.password);
         await router.invalidate({ sync: true });
-        await navigate({ to: fallbacke });
-      } catch (error) {
-        console.error('Login error', error);
+        await navigate({ to: fallback });
+      } catch (err) {
+        console.error('Login error', err);
+        const _error = err as CustomError;
+        setError(_error);
       }
     },
   });
 
   const onCancel = () => {
-    navigate({ to: fallbacke, replace: true }).catch((error) => {
-      console.error('Failed to navigate', error);
+    navigate({ to: fallback, replace: true }).catch((err) => {
+      console.error('Failed to navigate', err);
     });
   };
 
   return (
-    <>
-      <div>Login</div>
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          form.handleSubmit().catch((err) => {
-            console.error('Failed to submit form', err);
-          });
-        }}
-      >
-        <div>
-          <form.Field
-            name="username"
-            validators={{
-              onChange: ({ value }) =>
-                !value
-                  ? 'Username is required'
-                  : value.length < 3
-                    ? 'Username must be at least 3 characters'
-                    : undefined,
-              onChangeAsyncDebounceMs: 500,
-              onChangeAsync: async ({ value }) => {
-                await new Promise((resolve) => setTimeout(resolve, 1000));
-                if (value.includes('error')) {
-                  return 'No "error" allowed in username';
-                }
-                if (value === 'test') {
-                  return 'Username is taken';
-                }
-              },
-            }}
-            children={(field) => {
-              return (
-                <>
-                  <label htmlFor={field.name}>Username</label>
-                  <input
-                    className="input-bordered input w-full max-w-xs input-primary"
-                    id={field.name}
-                    name={field.name}
-                    value={field.state.value}
-                    autoComplete="off"
-                    onBlur={field.handleBlur}
-                    onChange={(e) => field.handleChange(e.target.value)}
-                  />
-                  <FieldInfo field={field} />
-                </>
-              );
-            }}
-          />
+    <div className="m-8 flex min-w-xs flex-col items-center justify-center bg-base-100">
+      <div className="flex max-w-md flex-col content-center items-center justify-center gap-4">
+        <Title cols={5} onClick={onCancel}>
+          Sign up
+        </Title>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            form.handleSubmit().catch((err) => {
+              console.error('Failed to submit form', err);
+            });
+          }}
+        >
+          <div className="mt-4 flex min-w-xs flex-col items-center justify-center gap-4 p-4">
+            <form.Field
+              name="username"
+              listeners={{
+                onChange: () => {
+                  setError(null);
+                },
+              }}
+              validators={{
+                onChange: ({ value }) =>
+                  !value
+                    ? 'Username is required'
+                    : value.length < 3
+                      ? 'Username must be at least 3 characters'
+                      : undefined,
+              }}
+              children={(field) => {
+                return (
+                  <div className="flex flex-col items-center gap-2">
+                    <label
+                      className="floating-label w-3xs"
+                      htmlFor={field.name}
+                    >
+                      <span className="label-text">Username</span>
+                      <input
+                        className="input-bordered input w-full max-w-xs input-primary"
+                        id={field.name}
+                        name={field.name}
+                        type="text"
+                        placeholder="Username"
+                        value={field.state.value}
+                        autoComplete="off"
+                        onBlur={field.handleBlur}
+                        onChange={(e) => field.handleChange(e.target.value)}
+                      />
+                    </label>
+                    <FieldInfo className="text-error-content" field={field} />
+                  </div>
+                );
+              }}
+            />
 
-          <form.Field
-            name="password"
-            validators={{
-              onChange: ({ value }) =>
-                !value
-                  ? 'Password is required'
-                  : value.length < 3
-                    ? 'Password must be at least 3 characters'
-                    : undefined,
-            }}
-            children={(field) => {
-              return (
-                <>
-                  <label htmlFor={field.name}>Password</label>
-                  <input
-                    className="input-bordered input w-full max-w-xs input-primary"
-                    id={field.name}
-                    name={field.name}
-                    value={field.state.value}
-                    autoComplete="off"
-                    onBlur={field.handleBlur}
-                    onChange={(e) => field.handleChange(e.target.value)}
-                  />
-                  <FieldInfo field={field} />
-                </>
-              );
-            }}
-          />
+            <form.Field
+              name="password"
+              validators={{
+                onChange: ({ value }) =>
+                  !value
+                    ? 'Password is required'
+                    : value.length < 3
+                      ? 'Password must be at least 3 characters'
+                      : undefined,
+              }}
+              children={(field) => {
+                return (
+                  <>
+                    {error && (
+                      <div className="text-error-content">
+                        Error: {error.message}
+                      </div>
+                    )}
+                    <div className="flex flex-col items-center gap-2">
+                      <label
+                        className="floating-label w-3xs"
+                        htmlFor={field.name}
+                      >
+                        <span className="label-text">Password</span>
+                        <input
+                          className="input-bordered input w-full max-w-xs input-primary"
+                          id={field.name}
+                          name={field.name}
+                          type="password"
+                          placeholder="Password"
+                          value={field.state.value}
+                          autoComplete="off"
+                          onBlur={field.handleBlur}
+                          onChange={(e) => field.handleChange(e.target.value)}
+                        />
+                      </label>
+                      <FieldInfo className="text-error-content" field={field} />
+                    </div>
+                  </>
+                );
+              }}
+            />
 
-          <form.Subscribe
-            selector={(state) => [state.canSubmit, state.isSubmitting]}
-            children={([canSubmit, isSubmitting]) => (
-              <>
-                <button type="button" onClick={onCancel}>
-                  Cancel
-                </button>
-                <button type="submit" disabled={!canSubmit}>
-                  {isSubmitting ? 'Submitting...' : 'Submit'}
-                </button>
-                <button type="reset" onClick={() => form.reset()}>
-                  Reset
-                </button>
-              </>
-            )}
-          />
-        </div>
-      </form>
-    </>
+            <form.Subscribe
+              selector={(state) => [state.canSubmit, state.isSubmitting]}
+              children={([canSubmit, isSubmitting]) => (
+                <div className="mt-4 flex flex-row items-center justify-center gap-2">
+                  <button
+                    className="btn w-24 btn-secondary"
+                    type="button"
+                    onClick={onCancel}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    className="btn w-24 btn-outline btn-secondary"
+                    type="reset"
+                    onClick={() => form.reset()}
+                  >
+                    Reset
+                  </button>
+                  <button
+                    className="btn w-24 btn-primary"
+                    type="submit"
+                    disabled={!canSubmit}
+                  >
+                    {isSubmitting ? 'Submitting...' : 'Submit'}
+                  </button>
+                </div>
+              )}
+            />
+          </div>
+        </form>
+      </div>
+    </div>
   );
 }

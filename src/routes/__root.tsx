@@ -1,9 +1,5 @@
 import React, { Suspense } from 'react';
-import {
-  Link,
-  Outlet,
-  createRootRouteWithContext,
-} from '@tanstack/react-router';
+import { Outlet, createRootRouteWithContext } from '@tanstack/react-router';
 import type { AuthContextType } from '../types/auth';
 
 // import { TanStackRouterDevtools } from '@tanstack/router-devtools';
@@ -26,15 +22,6 @@ export type RouterContext = {
 export const Route = createRootRouteWithContext<RouterContext>()({
   component: () => (
     <>
-      <div className="flex gap-2 p-2">
-        <Link to="/" className="[&.active]:font-bold">
-          Home
-        </Link>
-        <Link to="/about" className="[&.active]:font-bold">
-          About
-        </Link>
-      </div>
-      <hr />
       <Outlet />
       <Suspense>
         <TanStackRouterDevtools />
@@ -42,23 +29,3 @@ export const Route = createRootRouteWithContext<RouterContext>()({
     </>
   ),
 });
-
-// export const Route = createRootRoute({
-//   component: () => (
-//     <>
-//       <div className="flex gap-2 p-2">
-//         <Link to="/" className="[&.active]:font-bold">
-//           Home
-//         </Link>
-//         <Link to="/about" className="[&.active]:font-bold">
-//           About
-//         </Link>
-//       </div>
-//       <hr />
-//       <Outlet />
-//       <Suspense>
-//         <TanStackRouterDevtools position="bottom-right" initialIsOpen={false} />
-//       </Suspense>
-//     </>
-//   ),
-// });

@@ -1,6 +1,7 @@
 import React from 'react';
 import { AuthContext } from '../types/auth';
 import API from '../services/api';
+import { clearJwtToken, setJwtToken } from '../services/api/utils/jwtToken';
 import type { AuthUser } from '../types/auth';
 
 const key = 'chai.auth.user';
@@ -25,6 +26,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = React.useCallback(() => {
     setStoredUser(null);
     setUser(null);
+    clearJwtToken();
   }, []);
 
   const login = React.useCallback(
@@ -42,7 +44,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       setStoredUser(newUser);
       setUser(newUser);
-      API.setAccessToken(newUser.jwt);
+      setJwtToken(newUser.jwt);
     },
     []
   );

@@ -11,3 +11,9 @@ export type Info = {
   numOfMessages: number;
   lastMessageAt: string | undefined;
 };
+
+export type Conversation = {
+  id: number;
+  name: string;
+  createdAt: Date;
+};

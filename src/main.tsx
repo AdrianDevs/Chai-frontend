@@ -3,6 +3,7 @@ import { StrictMode } from 'react';
 import { RouterProvider, createRouter } from '@tanstack/react-router';
 import { routeTree } from './routeTree.gen'; // Import the generated route tree
 import { AuthProvider } from './components/auth';
+import { ThemeProvider } from './components/theme';
 import { useAuth } from './hooks/useAuth';
 import './index.css';
 
@@ -33,9 +34,11 @@ function InnerApp() {
 // eslint-disable-next-line react-refresh/only-export-components
 function App() {
   return (
-    <AuthProvider>
-      <InnerApp />
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <InnerApp />
+      </AuthProvider>
+    </ThemeProvider>
   );
 }
 
