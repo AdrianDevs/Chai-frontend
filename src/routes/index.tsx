@@ -56,7 +56,18 @@ function Index() {
             </div>
             <div className="flex flex-col items-center justify-center gap-2">
               <p className="text-secondary-content">Last Message</p>
-              <p className="text-secondary-content/80">{info?.lastMessageAt}</p>
+              <p className="text-secondary-content/80">
+                {info?.lastMessageAt
+                  ? new Intl.DateTimeFormat('en-GB', {
+                      dateStyle: 'medium',
+                      timeStyle: 'short',
+                      timeZone:
+                        Intl.DateTimeFormat().resolvedOptions().timeZone,
+                    })
+                      .format(new Date(info.lastMessageAt))
+                      .replace(',', ' at')
+                  : '-'}
+              </p>
             </div>
           </div>
         </section>

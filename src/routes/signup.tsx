@@ -9,7 +9,7 @@ import {
 import { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import API from '../services/api';
-import { FieldInfo } from '../components/fieldInfo';
+import { FieldError } from '../components/fieldError';
 import Title from '../components/title';
 import type { CustomError } from '../types/error';
 
@@ -57,7 +57,7 @@ function SignUpComponent() {
     },
   });
 
-  const onCancel = () => {
+  const navigateToFallback = () => {
     // TODO update navigate to accept a redirect option from search
     // await navigate({ to: search.redirect || fallback }).catch((err) => {
     //   console.error('Failed to navigate', err);
@@ -71,7 +71,7 @@ function SignUpComponent() {
   return (
     <div className="m-8 flex min-w-xs flex-col items-center justify-center bg-base-100">
       <div className="flex max-w-md flex-col content-center items-center justify-center gap-4">
-        <Title cols={5} onClick={onCancel}>
+        <Title cols={5} onClick={navigateToFallback}>
           Sign up
         </Title>
         <form
@@ -138,7 +138,7 @@ function SignUpComponent() {
                         onChange={(e) => field.handleChange(e.target.value)}
                       />
                     </label>
-                    <FieldInfo className="text-error-content" field={field} />
+                    <FieldError className="text-error-content" field={field} />
                   </div>
                 );
               }}
@@ -180,7 +180,7 @@ function SignUpComponent() {
                       />
                     </label>
 
-                    <FieldInfo className="text-error-content" field={field} />
+                    <FieldError className="text-error-content" field={field} />
                   </div>
                 );
               }}
@@ -204,7 +204,7 @@ function SignUpComponent() {
                     <button
                       className="btn w-24 btn-secondary"
                       type="button"
-                      onClick={onCancel}
+                      onClick={navigateToFallback}
                     >
                       Cancel
                     </button>

@@ -1,6 +1,6 @@
 import type { AnyFieldApi } from '@tanstack/react-form';
 
-export function FieldInfo({
+export function FieldError({
   field,
   className,
 }: {

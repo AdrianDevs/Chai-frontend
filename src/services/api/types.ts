@@ -17,3 +17,11 @@ export type Conversation = {
   name: string;
   createdAt: Date;
 };
+
+export type Message = {
+  id: number;
+  content: string;
+  createdAt: Date;
+  userId: number;
+  conversationId: number;
+};

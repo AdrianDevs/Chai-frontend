@@ -15,8 +15,10 @@ const Title = ({ cols, children, className, onClick }: TitleProps) => {
           <FaArrowLeft className="h-6 w-6" />
         </button>
       </div>
-      <div className={`col-start-2 col-end-${cols} flex-none`}>
-        <div className="text-center text-4xl font-bold">{children}</div>
+      <div
+        className={`col-start-2 col-end-${cols} mr-2 ml-2 grow text-center text-4xl font-bold text-base-content`}
+      >
+        {children}
       </div>
       <div className={`col-span-1 col-start-${cols} flex-none`}></div>
     </div>

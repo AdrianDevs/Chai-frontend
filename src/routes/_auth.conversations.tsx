@@ -1,4 +1,4 @@
-import { Link, Outlet, createFileRoute } from '@tanstack/react-router';
+import { Outlet, createFileRoute } from '@tanstack/react-router';
 import API from '../services/api';
 
 export const Route = createFileRoute('/_auth/conversations')({
@@ -8,24 +8,13 @@ export const Route = createFileRoute('/_auth/conversations')({
       conversations: convoResponse.data,
     };
   },
-  component: ConversationComponent,
+  component: ConversatiosnComponent,
 });
 
-function ConversationComponent() {
-  return (
-    <>
-      <div>Conversations</div>
-      <Link
-        className="btn btn-secondary"
-        to="/conversations/$conversationId"
-        params={{ conversationId: '1' }}
-      >
-        Convo 1
-      </Link>
-      <Link className="btn btn-primary" to="/conversations/new">
-        New Conversation
-      </Link>
-      <Outlet />
-    </>
-  );
+function ConversatiosnComponent() {
+  const { conversations } = Route.useLoaderData();
+
+  console.log('ConversatiosnComponent - conversations', conversations);
+
+  return <Outlet />;
 }

@@ -1,10 +1,21 @@
 /* eslint-disable react/no-children-prop */
 import { useForm } from '@tanstack/react-form';
-import { createFileRoute, useNavigate } from '@tanstack/react-router';
+import {
+  createFileRoute,
+  useNavigate,
+  useRouter,
+} from '@tanstack/react-router';
+import { useState } from 'react';
+import { FaTrash } from 'react-icons/fa6';
 import { useAuth } from '../hooks/useAuth';
-import { FieldInfo } from '../components/fieldInfo';
+import { FieldError } from '../components/fieldError';
 import API from '../services/api';
+import Title from '../components/title';
+import FieldTextBox from '../components/fieldTextBox';
 import type { AnyFieldApi } from '@tanstack/react-form';
+import type { CustomError } from '../types/error';
+
+const fallback = '/conversations';
 
 export const Route = createFileRoute('/_auth/conversations/new')({
   component: NewConversationComponent,
@@ -12,8 +23,9 @@ export const Route = createFileRoute('/_auth/conversations/new')({
 
 function NewConversationComponent() {
   const auth = useAuth();
-  // const router = useRouter();
+  const router = useRouter();
   const navigate = useNavigate({ from: '/signup' });
+  const [error, setError] = useState<CustomError | null>(null);
 
   const form = useForm({
     defaultValues: {
@@ -24,253 +36,240 @@ function NewConversationComponent() {
       }>,
     },
     validators: {
-      onSubmit: ({ value }) => {
-        console.log('validators.onSubmit', value);
-        // const errors: Array<string> = [];
-
-        if (!value.conversationName) {
-          return 'Conversation name is required';
-          // errors.push('Conversation name is required');
-        }
-        if (value.conversationName.length < 5) {
-          return 'Conversation name must be at least 3 characters';
-          // errors.push('Conversation name must be at least 5 characters');
-        }
+      onChange: ({ value }) => {
         if (!value.invitees.length) {
-          return 'At least one invitee is required';
-          // errors.push('At least one invitee is required');
+          return {
+            form: 'At least one invitee is required',
+            fields: {
+              invitees: 'At least one invitee is required',
+            },
+          };
         }
-        if (value.invitees.length > 5) {
-          return 'No more than 5 invitees allowed';
-          // errors.push('No more than 5 invitees allowed');
-        }
-        if (value.invitees.some((invitee) => !invitee.username)) {
-          return 'Invitee username is required';
-          // errors.push('Invitee username is required');
-        }
-        if (value.invitees.some((invitee) => invitee.username.length < 3)) {
-          return 'Invitee username must be at least 3 characters';
-          // errors.push('Invitee username must be at least 3 characters');
-        }
-
-        return false;
-        // return errors.length ? errors : undefined;
       },
     },
     onSubmit: async (values) => {
       console.log('Form submitting new conversation', values);
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
       try {
-        // await auth.createConversation(values.value.conversationName);
-        // await router.invalidate({ sync: true });
-        await navigate({ to: '/conversations' });
-      } catch (error) {
-        console.error('Failed to create conversation', error);
+        const usersResponse = await API.fetchUsersByUsernames(
+          values.value.invitees.map((invitee) => invitee.username)
+        );
+        console.log('users', usersResponse.data);
+        if (!usersResponse.data || usersResponse.data.length === 0) {
+          throw new Error('No users found');
+        }
+
+        const conversationResponse = await API.createConversation(
+          values.value.conversationName,
+          usersResponse.data
+        );
+        console.log('conversation', conversationResponse.data);
+
+        await router.invalidate({ sync: true });
+        await navigate({ to: fallback });
+      } catch (err) {
+        console.error('Failed to create conversation', err);
       }
     },
   });
 
-  const onCancel = () => {
-    navigate({ to: '/conversations', replace: true }).catch((error) => {
-      console.error('Failed to navigate', error);
+  const navigateToFallback = () => {
+    navigate({ to: fallback, replace: true }).catch((err) => {
+      console.error('Failed to navigate', err);
     });
+    return;
   };
 
   const handleRemoveInvitee = (index: number, field: AnyFieldApi) => {
-    field.removeValue(index).catch((error) => {
-      console.error('Failed to remove invitee', error);
+    field.removeValue(index).catch((err) => {
+      console.error('Failed to remove invitee', err);
     });
   };
 
   return (
-    <>
-      <div>New Conversation</div>
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          form.handleSubmit().catch((err) => {
-            console.error('Failed to submit form', err);
-          });
-        }}
-      >
-        <div>
-          <form.Field
-            name="conversationName"
-            validators={{
-              onChange: ({ value }) =>
-                !value
-                  ? 'Conversation name is required'
-                  : value.length < 3
-                    ? 'Conversation name must be at least 3 characters'
-                    : null,
-            }}
-            children={(field) => {
-              return (
-                <>
-                  <label htmlFor={field.name}>Conversation Name</label>
-                  <input
-                    className="input-bordered input w-full max-w-xs input-primary"
-                    id={field.name}
-                    name={field.name}
-                    value={field.state.value}
-                    autoComplete="off"
-                    onBlur={field.handleBlur}
-                    onChange={(e) => field.handleChange(e.target.value)}
-                  />
-                  <FieldInfo field={field} />
-                </>
-              );
-            }}
-          />
-
-          <form.Field name="invitees" mode="array">
-            {(field) => {
-              return (
-                <div>
-                  {field.state.value.map((invitee, i) => {
-                    console.log('invitee', invitee);
-                    return (
-                      <form.Field
-                        key={i}
-                        name={`invitees[${i}].username`}
-                        // name={`invitees[${i}]`}
-                        validators={{
-                          onChange: ({ value }) => {
-                            console.log('subField.validators.onChange', value);
-                            if (value === auth.user?.username) {
-                              return 'Cannot invite yourself';
-                            }
-                            if (value.includes('error')) {
-                              return 'No "error" allowed in username';
-                            }
-                            if (value === 'test') {
-                              return 'Username is taken';
-                            }
-                            return !value
-                              ? 'Username is required'
-                              : value.length < 3
-                                ? 'Username must be at least 3 characters'
-                                : undefined;
-                          },
-                          onChangeAsyncDebounceMs: 500,
-                          onChangeAsync: async ({ value }) => {
-                            const response = await API.validateUsername(value);
-                            console.log('API.validateUsername', response);
-                            if (
-                              response.status === 200 &&
-                              response.data?.status === 'available'
-                            ) {
-                              return 'User does not exist';
-                            }
-                          },
-                        }}
-                      >
-                        {(subField) => {
-                          return (
-                            <div>
-                              <label>
-                                <div>Name of person {i}</div>
-                                <input
-                                  className="input-bordered input w-full max-w-xs input-primary"
-                                  id={subField.name}
-                                  name={subField.name}
-                                  value={subField.state.value}
-                                  autoComplete="off"
-                                  onBlur={subField.handleBlur}
-                                  onChange={(e) => {
-                                    console.group(
-                                      'subField.input.handleChange'
-                                    );
-                                    console.log(
-                                      'input value',
-                                      subField.state.value
-                                    );
-                                    console.log(
-                                      'e.target.value',
-                                      e.target.value
-                                    );
-                                    console.groupEnd();
-
-                                    subField.handleChange(e.target.value);
-                                  }}
-                                />
-                              </label>
-                              <button
-                                className="btn btn-outline btn-secondary"
-                                type="button"
-                                onClick={() => handleRemoveInvitee(i, field)}
-                              >
-                                Remove
-                              </button>
-                              <FieldInfo field={subField} />
-                            </div>
-                          );
-                        }}
-                      </form.Field>
-                    );
-                  })}
-                  <button
-                    className="btn btn-outline btn-primary"
-                    type="button"
-                    onClick={() => field.pushValue({ username: '', id: 0 })}
-                  >
-                    Add person
-                  </button>
-                </div>
-              );
-            }}
-          </form.Field>
-
-          <form.Subscribe
-            selector={(state) => [
-              state.canSubmit,
-              state.isSubmitting,
-              state.errors,
-            ]}
-            children={([canSubmit, isSubmitting, errors]) => (
-              <>
-                {errors && <div>ERRORRS: {errors}</div>}
-                {errors && Array.isArray(errors) && errors.length > 0 ? (
-                  <div>
-                    <strong>Errors:</strong>
-                    <ul>
-                      {errors.map((error, i) => (
-                        <li key={i}>{error}</li>
-                      ))}
-                    </ul>
+    <div className="m-8 flex min-w-xs flex-col items-center justify-center bg-base-100">
+      <div className="flex max-w-md flex-col content-center items-center justify-center gap-4">
+        <Title cols={5} onClick={navigateToFallback}>
+          New Convo
+        </Title>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            form.handleSubmit().catch((err) => {
+              console.error('Failed to submit form', err);
+            });
+          }}
+        >
+          <div className="mt-4 mb-2 flex flex-col items-center gap-2">
+            <form.Field
+              name="conversationName"
+              listeners={{
+                onChange: () => {
+                  setError(null);
+                },
+              }}
+              validators={{
+                onChange: ({ value }) =>
+                  !value
+                    ? 'Conversation name is required'
+                    : value.length < 3
+                      ? 'Conversation name must be at least 3 characters'
+                      : null,
+              }}
+              children={(field) => {
+                return (
+                  <div className="flex flex-col items-center gap-2">
+                    <FieldTextBox
+                      field={field}
+                      label="Conversation name"
+                      value={field.state.value}
+                    />
+                    <FieldError className="text-error-content" field={field} />
                   </div>
-                ) : (
-                  <>
-                    <button
-                      className="btn btn-secondary"
-                      type="button"
-                      onClick={onCancel}
-                    >
-                      Cancel
-                    </button>
+                );
+              }}
+            />
+
+            <div className="mt-4">
+              <p className="text-lg font-bold">Invitees:</p>
+            </div>
+            <form.Field
+              name="invitees"
+              mode="array"
+              listeners={{
+                onChange: () => {
+                  setError(null);
+                },
+              }}
+            >
+              {(field) => {
+                return (
+                  <div className="flex flex-col items-center gap-2">
+                    {field.state.value.map((_, i) => {
+                      return (
+                        <form.Field
+                          key={i}
+                          name={`invitees[${i}].username`}
+                          listeners={{
+                            onChange: () => {
+                              setError(null);
+                            },
+                          }}
+                          validators={{
+                            onChange: ({ value }) => {
+                              if (value === auth.user?.username) {
+                                return 'Cannot invite yourself';
+                              }
+                              return !value
+                                ? 'Username is required'
+                                : undefined;
+                            },
+                            onChangeAsyncDebounceMs: 500,
+                            onChangeAsync: async ({ value }) => {
+                              const response =
+                                await API.validateUsername(value);
+                              if (
+                                response.status === 200 &&
+                                response.data?.status === 'available'
+                              ) {
+                                return 'User does not exist';
+                              }
+                            },
+                          }}
+                        >
+                          {(subField) => {
+                            return (
+                              <div className="mt-2 mb-2 flex flex-col items-center gap-2">
+                                <div className="flex w-3xs flex-row items-center gap-2">
+                                  <FieldTextBox
+                                    field={subField}
+                                    label="Invitee username"
+                                    value={subField.state.value}
+                                  />
+                                  <button
+                                    className="btn btn-outline btn-secondary"
+                                    type="button"
+                                    onClick={() =>
+                                      handleRemoveInvitee(i, field)
+                                    }
+                                  >
+                                    <FaTrash />
+                                  </button>
+                                </div>
+                                <FieldError field={subField} />
+                              </div>
+                            );
+                          }}
+                        </form.Field>
+                      );
+                    })}
                     <button
                       className="btn btn-primary"
-                      type="submit"
-                      disabled={!canSubmit}
+                      type="button"
+                      disabled={field.state.value.length >= 10}
+                      onClick={() => field.pushValue({ username: '', id: 0 })}
                     >
-                      {isSubmitting ? 'Submitting...' : 'Submit'}
+                      Add person
                     </button>
-                    <button
-                      className="btn btn-outline btn-secondary"
-                      type="reset"
-                      onClick={() => form.reset()}
-                    >
-                      Reset
-                    </button>
+                  </div>
+                );
+              }}
+            </form.Field>
+
+            <form.Subscribe
+              selector={(state) => [
+                state.canSubmit,
+                state.isSubmitting,
+                state.errorMap,
+              ]}
+              children={([canSubmit, isSubmitting, errorMap]) => {
+                return (
+                  <>
+                    {errorMap &&
+                    typeof errorMap !== 'boolean' &&
+                    errorMap.onChange ? (
+                      <div className="text-error-content">
+                        <em className="text-error-content">
+                          {errorMap.onChange as unknown as string}
+                        </em>
+                      </div>
+                    ) : (
+                      error && (
+                        <div className="text-error-content">
+                          Error: {error.message}
+                        </div>
+                      )
+                    )}
+                    <div className="mt-4 flex flex-row justify-center gap-4">
+                      <button
+                        className="btn btn-secondary"
+                        type="button"
+                        onClick={navigateToFallback}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        className="btn btn-outline btn-secondary"
+                        type="reset"
+                        onClick={() => form.reset()}
+                      >
+                        Reset
+                      </button>
+                      <button
+                        className="btn btn-primary"
+                        type="submit"
+                        disabled={!canSubmit}
+                      >
+                        {isSubmitting ? 'Submitting...' : 'Submit'}
+                      </button>
+                    </div>
                   </>
-                )}
-              </>
-            )}
-          />
-        </div>
-      </form>
-    </>
+                );
+              }}
+            />
+          </div>
+        </form>
+      </div>
+    </div>
   );
 }

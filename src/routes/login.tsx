@@ -8,7 +8,7 @@ import {
 } from '@tanstack/react-router';
 import { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
-import { FieldInfo } from '../components/fieldInfo';
+import { FieldError } from '../components/fieldError';
 import Title from '../components/title';
 import type { CustomError } from '../types/error';
 
@@ -107,7 +107,7 @@ function LoginComponent() {
                         onChange={(e) => field.handleChange(e.target.value)}
                       />
                     </label>
-                    <FieldInfo className="text-error-content" field={field} />
+                    <FieldError className="text-error-content" field={field} />
                   </div>
                 );
               }}
@@ -149,7 +149,10 @@ function LoginComponent() {
                           onChange={(e) => field.handleChange(e.target.value)}
                         />
                       </label>
-                      <FieldInfo className="text-error-content" field={field} />
+                      <FieldError
+                        className="text-error-content"
+                        field={field}
+                      />
                     </div>
                   </>
                 );

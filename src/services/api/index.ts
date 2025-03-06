@@ -1,5 +1,5 @@
 import ApiMethods from './apiMethods';
-import type { Conversation, Info } from './types';
+import type { Conversation, Info, Message } from './types';
 
 const ENDPOINTS = {
   INFO: () => '/info',
@@ -7,8 +7,33 @@ const ENDPOINTS = {
   LOGIN: () => '/auth/login',
   VALIDATE_USERNAME: (username: string) =>
     `/users/validate/?username=${username}`,
-  USERS_BY_USERNAMES: (usernames: Array<string>) =>
-    `/users?usernames=${usernames.join(',')}`,
+  USERS_BY_USERNAMES: (usernames: Array<string>) => {
+    if (usernames.length === 0) {
+      return '/users/search';
+    }
+
+    const startUrl = `/users/search?usernames=${usernames[0]}`;
+
+    if (usernames.length === 1) {
+      return startUrl;
+    }
+
+    const url = usernames.slice(1).reduce((acc, username) => {
+      return `${acc}&usernames=${username}`;
+    }, startUrl);
+    return url;
+  },
+  CREATE_CONVERSATION: () => '/conversations',
+  CONVERSATION_BY_ID: (conversationId: number) =>
+    `/conversations/${conversationId}`,
+  CONVERSATION_MESSAGES: (
+    conversationId: number,
+    page: number,
+    limit: number
+  ) =>
+    `/conversations/${conversationId}/messages?offset=${page}&limit=${limit}`,
+  CREATE_CONVERSATION_MESSAGE: (conversationId: number) =>
+    `/conversations/${conversationId}/messages`,
 };
 
 class API {
@@ -44,7 +69,19 @@ class API {
 
   static fetchUsersByUsernames = (usernames: Array<string>) => {
     const url = ENDPOINTS.USERS_BY_USERNAMES(usernames);
+    // console.log('url', url);
     return ApiMethods.get<Array<{ id: number; username: string }>>(url);
+  };
+
+  static createConversation = (
+    conversationName: string,
+    invitees: Array<{ id: number; username: string }>
+  ) => {
+    const url = ENDPOINTS.CREATE_CONVERSATION();
+    return ApiMethods.post<Conversation>(url, {
+      conversation: { name: conversationName },
+      user_ids: invitees.map((invitee) => invitee.id),
+    });
   };
 
   static fetchConversations = () => {
@@ -52,35 +89,27 @@ class API {
     return ApiMethods.get<Array<Conversation>>(url);
   };
 
-  // static loadSurveys = () => {
-  //   const url = ENDPOINTS.SURVEYS();
-  //   return ApiMethods.get<Survey[]>(url);
-  // };
+  static fetchConversationById = (conversationId: number) => {
+    const url = ENDPOINTS.CONVERSATION_BY_ID(conversationId);
+    return ApiMethods.get<Conversation>(url);
+  };
 
-  // static loadSurvey = (surveyId: number) => {
-  //   const url = ENDPOINTS.SURVEYS() + surveyId;
-  //   return ApiMethods.get<Survey>(url);
-  // };
+  static fetchConversationMessages = (
+    conversationId: number,
+    page: number,
+    limit: number
+  ) => {
+    const url = ENDPOINTS.CONVERSATION_MESSAGES(conversationId, page, limit);
+    return ApiMethods.get<Array<Message>>(url);
+  };
 
-  // static createSurvey = (
-  //   survey: Omit<Survey, 'id' | 'brand'> & { brand_id: number }
-  // ) => {
-  //   const url = ENDPOINTS.SURVEYS();
-  //   return ApiMethods.post(url, survey);
-  // };
-
-  // static updateSurvey = (
-  //   surveyId: number,
-  //   survey: Omit<Survey, 'id' | 'brand'> & { brand_id: number }
-  // ) => {
-  //   const url = ENDPOINTS.SURVEYS() + surveyId + '/';
-  //   return ApiMethods.put(url, survey);
-  // };
-
-  // static deleteSurvey = (surveyId: number) => {
-  //   const url = ENDPOINTS.SURVEYS() + surveyId + '/';
-  //   return ApiMethods.delete(url);
-  // };
+  static createConversationMessage = (
+    conversationId: number,
+    message: Omit<Message, 'id' | 'createdAt'>
+  ) => {
+    const url = ENDPOINTS.CREATE_CONVERSATION_MESSAGE(conversationId);
+    return ApiMethods.post<Omit<Message, 'id' | 'createdAt'>>(url, message);
+  };
 }
 
 export default API;

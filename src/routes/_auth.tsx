@@ -1,12 +1,4 @@
-import {
-  Link,
-  Outlet,
-  createFileRoute,
-  redirect,
-  useNavigate,
-  useRouter,
-} from '@tanstack/react-router';
-import { useAuth } from '../hooks/useAuth';
+import { createFileRoute, redirect } from '@tanstack/react-router';
 
 export const Route = createFileRoute('/_auth')({
   beforeLoad: ({ context, location }) => {
@@ -23,38 +15,4 @@ export const Route = createFileRoute('/_auth')({
       });
     }
   },
-  component: AuthLayout,
 });
-
-function AuthLayout() {
-  const router = useRouter();
-  const navigate = useNavigate();
-  const auth = useAuth();
-
-  const handleLogout = () => {
-    if (window.confirm('Are you sure you want to logout?')) {
-      auth.logout();
-      router
-        .invalidate()
-        .then(() => {
-          return navigate({ to: '/' });
-        })
-        .catch((error) => {
-          console.error('Failed to logout', error);
-        });
-    }
-  };
-
-  return (
-    <>
-      <h1>Auth Layout</h1>
-      <Link className="btn btn-primary" to="/">
-        Home
-      </Link>
-      <button className="btn btn-outline btn-secondary" onClick={handleLogout}>
-        Logout
-      </button>
-      <Outlet />
-    </>
-  );
-}
