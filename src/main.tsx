@@ -2,8 +2,8 @@ import ReactDOM from 'react-dom/client';
 import { StrictMode } from 'react';
 import { RouterProvider, createRouter } from '@tanstack/react-router';
 import { routeTree } from './routeTree.gen'; // Import the generated route tree
-import { AuthProvider } from './components/auth';
-import { ThemeProvider } from './components/theme';
+import { AuthProvider } from './providers/auth';
+import { ThemeProvider } from './providers/theme';
 import { useAuth } from './hooks/useAuth';
 import './index.css';
 

@@ -1,28 +1,8 @@
-/* eslint-disable react-refresh/only-export-components */
-import { createContext, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
+import { ThemeContext, themes } from '../types/theme';
 import type { ReactNode } from 'react';
 
-const themes = [
-  'light',
-  'dark',
-  'cupcake',
-  'aqua',
-  'cyberpunk',
-  'nord',
-  'dracula',
-] as const;
-
 export type Theme = (typeof themes)[number];
-
-export type ThemeContextType = {
-  theme: Theme;
-  setTheme: (theme: Theme) => void;
-  nextTheme: () => void;
-};
-
-export const ThemeContext = createContext<ThemeContextType | undefined>(
-  undefined
-);
 
 const STORAGE_KEY = 'chai.ui.theme';
 
@@ -51,5 +31,3 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     </ThemeContext.Provider>
   );
 }
-
-export { themes };
