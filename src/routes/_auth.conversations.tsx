@@ -12,9 +12,5 @@ export const Route = createFileRoute('/_auth/conversations')({
 });
 
 function ConversatiosnComponent() {
-  const { conversations } = Route.useLoaderData();
-
-  console.log('ConversatiosnComponent - conversations', conversations);
-
   return <Outlet />;
 }

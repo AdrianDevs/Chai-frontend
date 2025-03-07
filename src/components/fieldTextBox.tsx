@@ -15,10 +15,10 @@ const FieldTextBox = ({
 }: FieldTextBoxProps) => {
   return (
     <div className={`flex flex-col items-center gap-2 ${className}`}>
-      <label className="floating-label w-3xs" htmlFor={field.name}>
+      <label className="floating-label" htmlFor={field.name}>
         <span className="label-text">{label}</span>
         <input
-          className="input-bordered validator input input-lg input-primary"
+          className="input-bordered wrap validator input input-lg input-primary"
           id={field.name}
           name={field.name}
           type="text"

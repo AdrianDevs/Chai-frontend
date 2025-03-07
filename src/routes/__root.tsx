@@ -22,7 +22,9 @@ export type RouterContext = {
 export const Route = createRootRouteWithContext<RouterContext>()({
   component: () => (
     <>
-      <Outlet />
+      <div className="m-8 flex min-w-xs flex-col items-center justify-center bg-base-100">
+        <Outlet />
+      </div>
       <Suspense>
         <TanStackRouterDevtools />
       </Suspense>

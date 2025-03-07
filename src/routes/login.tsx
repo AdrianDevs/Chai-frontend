@@ -57,50 +57,88 @@ function LoginComponent() {
   };
 
   return (
-    <div className="m-8 flex min-w-xs flex-col items-center justify-center bg-base-100">
-      <div className="flex max-w-md flex-col content-center items-center justify-center gap-4">
-        <Title cols={5} onClick={onCancel}>
-          Sign up
-        </Title>
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            form.handleSubmit().catch((err) => {
-              console.error('Failed to submit form', err);
-            });
-          }}
-        >
-          <div className="mt-4 flex min-w-xs flex-col items-center justify-center gap-4 p-4">
-            <form.Field
-              name="username"
-              listeners={{
-                onChange: () => {
-                  setError(null);
-                },
-              }}
-              validators={{
-                onChange: ({ value }) =>
-                  !value
-                    ? 'Username is required'
-                    : value.length < 3
-                      ? 'Username must be at least 3 characters'
-                      : undefined,
-              }}
-              children={(field) => {
-                return (
+    // <div className="m-8 flex min-w-xs flex-col items-center justify-center bg-base-100">
+    <div className="flex max-w-md min-w-xs flex-col content-center items-center justify-center gap-4 p-4">
+      <Title onClick={onCancel}>Login</Title>
+      <form
+        className="w-full"
+        onSubmit={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          form.handleSubmit().catch((err) => {
+            console.error('Failed to submit form', err);
+          });
+        }}
+      >
+        <div className="mt-4 flex min-w-xs flex-col items-center justify-center gap-4">
+          <form.Field
+            name="username"
+            listeners={{
+              onChange: () => {
+                setError(null);
+              },
+            }}
+            validators={{
+              onChange: ({ value }) =>
+                !value
+                  ? 'Username is required'
+                  : value.length < 3
+                    ? 'Username must be at least 3 characters'
+                    : undefined,
+            }}
+            children={(field) => {
+              return (
+                <div className="flex flex-col items-center gap-2">
+                  <label className="floating-label w-3xs" htmlFor={field.name}>
+                    <span className="label-text">Username</span>
+                    <input
+                      className="input-bordered input w-full max-w-xs input-primary"
+                      id={field.name}
+                      name={field.name}
+                      type="text"
+                      placeholder="Username"
+                      value={field.state.value}
+                      autoComplete="off"
+                      onBlur={field.handleBlur}
+                      onChange={(e) => field.handleChange(e.target.value)}
+                    />
+                  </label>
+                  <FieldError className="text-error-content" field={field} />
+                </div>
+              );
+            }}
+          />
+
+          <form.Field
+            name="password"
+            validators={{
+              onChange: ({ value }) =>
+                !value
+                  ? 'Password is required'
+                  : value.length < 3
+                    ? 'Password must be at least 3 characters'
+                    : undefined,
+            }}
+            children={(field) => {
+              return (
+                <>
+                  {error && (
+                    <div className="text-error-content">
+                      Error: {error.message}
+                    </div>
+                  )}
                   <div className="flex flex-col items-center gap-2">
                     <label
                       className="floating-label w-3xs"
                       htmlFor={field.name}
                     >
-                      <span className="label-text">Username</span>
+                      <span className="label-text">Password</span>
                       <input
                         className="input-bordered input w-full max-w-xs input-primary"
                         id={field.name}
                         name={field.name}
-                        type="text"
-                        placeholder="Username"
+                        type="password"
+                        placeholder="Password"
                         value={field.state.value}
                         autoComplete="off"
                         onBlur={field.handleBlur}
@@ -109,87 +147,42 @@ function LoginComponent() {
                     </label>
                     <FieldError className="text-error-content" field={field} />
                   </div>
-                );
-              }}
-            />
+                </>
+              );
+            }}
+          />
 
-            <form.Field
-              name="password"
-              validators={{
-                onChange: ({ value }) =>
-                  !value
-                    ? 'Password is required'
-                    : value.length < 3
-                      ? 'Password must be at least 3 characters'
-                      : undefined,
-              }}
-              children={(field) => {
-                return (
-                  <>
-                    {error && (
-                      <div className="text-error-content">
-                        Error: {error.message}
-                      </div>
-                    )}
-                    <div className="flex flex-col items-center gap-2">
-                      <label
-                        className="floating-label w-3xs"
-                        htmlFor={field.name}
-                      >
-                        <span className="label-text">Password</span>
-                        <input
-                          className="input-bordered input w-full max-w-xs input-primary"
-                          id={field.name}
-                          name={field.name}
-                          type="password"
-                          placeholder="Password"
-                          value={field.state.value}
-                          autoComplete="off"
-                          onBlur={field.handleBlur}
-                          onChange={(e) => field.handleChange(e.target.value)}
-                        />
-                      </label>
-                      <FieldError
-                        className="text-error-content"
-                        field={field}
-                      />
-                    </div>
-                  </>
-                );
-              }}
-            />
-
-            <form.Subscribe
-              selector={(state) => [state.canSubmit, state.isSubmitting]}
-              children={([canSubmit, isSubmitting]) => (
-                <div className="mt-4 flex flex-row items-center justify-center gap-2">
-                  <button
-                    className="btn w-24 btn-secondary"
-                    type="button"
-                    onClick={onCancel}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    className="btn w-24 btn-outline btn-secondary"
-                    type="reset"
-                    onClick={() => form.reset()}
-                  >
-                    Reset
-                  </button>
-                  <button
-                    className="btn w-24 btn-primary"
-                    type="submit"
-                    disabled={!canSubmit}
-                  >
-                    {isSubmitting ? 'Submitting...' : 'Submit'}
-                  </button>
-                </div>
-              )}
-            />
-          </div>
-        </form>
-      </div>
+          <form.Subscribe
+            selector={(state) => [state.canSubmit, state.isSubmitting]}
+            children={([canSubmit, isSubmitting]) => (
+              <div className="mt-4 flex w-full flex-row justify-center gap-4">
+                <button
+                  className="btn w-24 btn-secondary"
+                  type="button"
+                  onClick={onCancel}
+                >
+                  Cancel
+                </button>
+                <button
+                  className="btn w-24 btn-outline btn-secondary"
+                  type="reset"
+                  onClick={() => form.reset()}
+                >
+                  Reset
+                </button>
+                <button
+                  className="btn w-24 btn-primary"
+                  type="submit"
+                  disabled={!canSubmit}
+                >
+                  {isSubmitting ? 'Submitting...' : 'Submit'}
+                </button>
+              </div>
+            )}
+          />
+        </div>
+      </form>
     </div>
+    // </div>
   );
 }

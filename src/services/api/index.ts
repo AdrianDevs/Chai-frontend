@@ -1,5 +1,11 @@
 import ApiMethods from './apiMethods';
-import type { Conversation, Info, Message } from './types';
+import type {
+  Conversation,
+  ConversationUser,
+  Info,
+  Message,
+  User,
+} from './types';
 
 const ENDPOINTS = {
   INFO: () => '/info',
@@ -24,6 +30,8 @@ const ENDPOINTS = {
     return url;
   },
   CREATE_CONVERSATION: () => '/conversations',
+  DELETE_CONVERSATION: (conversationId: number) =>
+    `/conversations/${conversationId}`,
   CONVERSATION_BY_ID: (conversationId: number) =>
     `/conversations/${conversationId}`,
   CONVERSATION_MESSAGES: (
@@ -34,6 +42,13 @@ const ENDPOINTS = {
     `/conversations/${conversationId}/messages?offset=${page}&limit=${limit}`,
   CREATE_CONVERSATION_MESSAGE: (conversationId: number) =>
     `/conversations/${conversationId}/messages`,
+  CONVERSATION_USERS: (conversationId: number) =>
+    `/conversations/${conversationId}/users`,
+  DELETE_CONVERSATION_USER: (conversationId: number, userId: number) =>
+    `/conversations/${conversationId}/users/${userId}`,
+  ADD_CONVERSATION_USER: (conversationId: number) =>
+    `/conversations/${conversationId}/users/`,
+  DELETE_PROFILE: () => '/users/me',
 };
 
 class API {
@@ -69,7 +84,6 @@ class API {
 
   static fetchUsersByUsernames = (usernames: Array<string>) => {
     const url = ENDPOINTS.USERS_BY_USERNAMES(usernames);
-    // console.log('url', url);
     return ApiMethods.get<Array<{ id: number; username: string }>>(url);
   };
 
@@ -82,6 +96,11 @@ class API {
       conversation: { name: conversationName },
       user_ids: invitees.map((invitee) => invitee.id),
     });
+  };
+
+  static deleteConversation = (conversationId: number) => {
+    const url = ENDPOINTS.DELETE_CONVERSATION(conversationId);
+    return ApiMethods.delete(url);
   };
 
   static fetchConversations = () => {
@@ -109,6 +128,27 @@ class API {
   ) => {
     const url = ENDPOINTS.CREATE_CONVERSATION_MESSAGE(conversationId);
     return ApiMethods.post<Omit<Message, 'id' | 'createdAt'>>(url, message);
+  };
+
+  static fetchConversationUsers = (conversationId: number) => {
+    console.log('fetchConversationUsers', conversationId);
+    const url = ENDPOINTS.CONVERSATION_USERS(conversationId);
+    return ApiMethods.get<Array<User>>(url);
+  };
+
+  static deleteConversationUser = (conversationId: number, userId: number) => {
+    const url = ENDPOINTS.DELETE_CONVERSATION_USER(conversationId, userId);
+    return ApiMethods.delete(url);
+  };
+
+  static addConversationUser = (conversationId: number, userId: number) => {
+    const url = ENDPOINTS.ADD_CONVERSATION_USER(conversationId);
+    return ApiMethods.post<ConversationUser>(url, { user_id: userId });
+  };
+
+  static deleteProfile = () => {
+    const url = ENDPOINTS.DELETE_PROFILE();
+    return ApiMethods.delete(url);
   };
 }
 

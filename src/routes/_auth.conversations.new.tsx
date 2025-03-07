@@ -88,9 +88,7 @@ function NewConversationComponent() {
   return (
     <div className="m-8 flex min-w-xs flex-col items-center justify-center bg-base-100">
       <div className="flex max-w-md flex-col content-center items-center justify-center gap-4">
-        <Title cols={5} onClick={navigateToFallback}>
-          New Convo
-        </Title>
+        <Title onClick={navigateToFallback}>New Message</Title>
         <form
           onSubmit={(e) => {
             e.preventDefault();

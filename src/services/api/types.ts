@@ -25,3 +25,14 @@ export type Message = {
   userId: number;
   conversationId: number;
 };
+
+export type User = {
+  id: number;
+  username: string;
+};
+
+export type ConversationUser = {
+  id: number;
+  username: string;
+  createdAt: Date;
+};
