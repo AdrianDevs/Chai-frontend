@@ -27,6 +27,7 @@
     "errorMsg": "Branch name validation failed"
   },
   "dependencies": {
+    "@glyphs/react-core": "^0.0.8",
     "@tailwindcss/vite": "^4.0.8",
     "@tanstack/react-form": "^0.45.1",
     "@tanstack/react-router": "^1.111.7",

@@ -1,7 +1,9 @@
 /* eslint-disable react/no-children-prop */
 import {
+  Link,
   Outlet,
   createFileRoute,
+  notFound,
   redirect,
   useNavigate,
   useRouter,
@@ -38,30 +40,45 @@ export const Route = createFileRoute('/_auth/conversations/$conversationId')({
   loader: async ({ params }) => {
     console.groupCollapsed('Route._auth.conversations.$conversationId.loader');
 
-    const conversationResponse = await API.fetchConversationById(
-      Number(params.conversationId)
+    try {
+      const conversationResponse = await API.fetchConversationById(
+        Number(params.conversationId)
+      );
+      console.log('conversationResponse', conversationResponse);
+
+      const messagesResponse = await API.fetchConversationMessages(
+        Number(params.conversationId),
+        0,
+        10
+      );
+      console.log('messagesResponse', messagesResponse);
+
+      const usersResponse = await API.fetchConversationUsers(
+        Number(params.conversationId)
+      );
+      console.log('usersResponse', usersResponse);
+
+      console.groupEnd();
+
+      return {
+        conversation: conversationResponse.data,
+        messages: messagesResponse.data,
+        users: usersResponse.data,
+      };
+    } catch (err) {
+      console.error('Failed to fetch conversation', err);
+      throw notFound() as Error;
+    }
+  },
+  notFoundComponent: () => {
+    return (
+      <div className="flex flex-col items-center justify-center gap-4">
+        <p className="text-2xl">Conversation not found</p>
+        <Link className="btn btn-primary" to="/conversations">
+          Go back
+        </Link>
+      </div>
     );
-    console.log('conversationResponse', conversationResponse);
-
-    const messagesResponse = await API.fetchConversationMessages(
-      Number(params.conversationId),
-      0,
-      10
-    );
-    console.log('messagesResponse', messagesResponse);
-
-    const usersResponse = await API.fetchConversationUsers(
-      Number(params.conversationId)
-    );
-    console.log('usersResponse', usersResponse);
-
-    console.groupEnd();
-
-    return {
-      conversation: conversationResponse.data,
-      messages: messagesResponse.data,
-      users: usersResponse.data,
-    };
   },
   component: ConversationSelectedComponent,
 });

@@ -103,5 +103,10 @@ $ make up
 
 ## TODO
 
-- Error page
-- Page not found
+- JWT refresh tokens
+- Webhooks
+- Unit tests
+- End-to-end tests
+- Build and run as prod
+- Dockerise
+- Deploy to prod
