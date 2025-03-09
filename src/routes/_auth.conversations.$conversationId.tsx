@@ -22,14 +22,7 @@ const fallback = '/conversations';
 
 export const Route = createFileRoute('/_auth/conversations/$conversationId')({
   beforeLoad: ({ context, location }) => {
-    console.groupCollapsed('Route._auth.beforeLoad');
-    console.log('context', context);
-    console.log('location', location);
-    console.groupEnd();
     if (!context.auth?.isAuthenticated) {
-      console.log(
-        'Route._auth.conversations.$conversationId.beforeLoad: Redirecting to /login'
-      );
       redirect({
         to: '/login',
         search: { redirect: location.href },
@@ -38,27 +31,20 @@ export const Route = createFileRoute('/_auth/conversations/$conversationId')({
     }
   },
   loader: async ({ params }) => {
-    console.groupCollapsed('Route._auth.conversations.$conversationId.loader');
-
     try {
       const conversationResponse = await API.fetchConversationById(
         Number(params.conversationId)
       );
-      console.log('conversationResponse', conversationResponse);
 
       const messagesResponse = await API.fetchConversationMessages(
         Number(params.conversationId),
         0,
         10
       );
-      console.log('messagesResponse', messagesResponse);
 
       const usersResponse = await API.fetchConversationUsers(
         Number(params.conversationId)
       );
-      console.log('usersResponse', usersResponse);
-
-      console.groupEnd();
 
       return {
         conversation: conversationResponse.data,
@@ -105,22 +91,16 @@ function ConversationSelectedComponent() {
       content: '',
     },
     onSubmit: async (values) => {
-      console.log('Form submitting new message', values);
-
       try {
         if (!values.value.userId || !values.value.conversationId) {
           throw new Error('User ID and conversation ID are required');
         }
 
-        const messageResponse = await API.createConversationMessage(
-          values.value.conversationId,
-          {
-            content: values.value.content,
-            userId: values.value.userId,
-            conversationId: values.value.conversationId,
-          }
-        );
-        console.log('messageResponse', messageResponse);
+        await API.createConversationMessage(values.value.conversationId, {
+          content: values.value.content,
+          userId: values.value.userId,
+          conversationId: values.value.conversationId,
+        });
         form.reset();
         await router.invalidate({ sync: true });
       } catch (err) {
@@ -138,7 +118,6 @@ function ConversationSelectedComponent() {
   };
 
   const handleDeleteUserConfirm = () => {
-    console.log('Deleting user', isDeletingUser);
     if (!userToDelete) {
       return;
     }
@@ -157,7 +136,6 @@ function ConversationSelectedComponent() {
   };
 
   const handleDeleteUserCancel = () => {
-    console.log('Cancelling delete user', isDeletingUser);
     setUserToDelete(null);
   };
 
@@ -195,8 +173,6 @@ function ConversationSelectedComponent() {
   };
 
   const handleAddUser = () => {
-    console.log('Adding user');
-
     navigate({
       to: '/conversations/$conversationId/users/new',
       params: {

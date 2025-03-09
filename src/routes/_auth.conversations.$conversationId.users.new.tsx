@@ -28,12 +28,11 @@ function UserComponent() {
       username: '',
     },
     onSubmit: async (values) => {
-      console.log('Form submitting new user', values);
       try {
         const usersResponse = await API.fetchUsersByUsernames([
           values.value.username,
         ]);
-        console.log('users', usersResponse.data);
+
         if (
           usersResponse.status !== 200 ||
           !usersResponse.data ||
@@ -48,7 +47,6 @@ function UserComponent() {
           Number(conversationId),
           user.id
         );
-        console.log('conversationResponse', conversationResponse.data);
 
         if (conversationResponse.status !== 201) {
           throw new Error('Failed to invite user');

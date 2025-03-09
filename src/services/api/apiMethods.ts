@@ -1,3 +1,4 @@
+import { redirect } from '@tanstack/react-router';
 import { CustomError } from '../../types/error';
 import axiosInstance from './axiosInstance';
 import type { AxiosError, AxiosRequestConfig, AxiosResponse } from 'axios';
@@ -20,7 +21,10 @@ class ApiMethods {
     };
 
     try {
-      const response: AxiosResponse<T> = await axiosInstance(config);
+      const response: AxiosResponse<T> = await axiosInstance({
+        ...config,
+        withCredentials: true,
+      });
 
       return {
         status: response.status,
@@ -30,23 +34,29 @@ class ApiMethods {
       const axiosError = error as AxiosError;
 
       if (axiosError.response) {
-        throw new CustomError(
-          'API request failed',
-          axiosError.response.status,
-          axiosError.response.data
-        );
+        throw axiosError;
       } else if (axiosError.request) {
-        throw new CustomError(
-          'API request failed: No response received',
-          500,
-          axiosError.message
-        );
+        throw axiosError;
       } else {
-        throw new CustomError(
-          'API request failed: Request setup failed',
-          500,
-          axiosError.message || 'Unknown error'
-        );
+        if (
+          typeof error === 'object' &&
+          error !== null &&
+          'isRedirect' in error
+        ) {
+          throw redirect({
+            to: '/login',
+            search: {
+              refresh: true,
+            },
+            replace: true,
+          }) as unknown as Error;
+        } else {
+          throw new CustomError(
+            'API request failed: Request setup failed',
+            500,
+            axiosError.message || 'Unknown error'
+          );
+        }
       }
     }
   }

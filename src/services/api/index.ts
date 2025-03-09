@@ -11,6 +11,8 @@ const ENDPOINTS = {
   INFO: () => '/info',
   SIGNUP: () => '/auth/signup',
   LOGIN: () => '/auth/login',
+  REFRESH_ACCESS_TOKEN: () => '/auth/refresh-token',
+  INVALIDATE_REFRESH_TOKEN: () => '/auth/revoke-token',
   VALIDATE_USERNAME: (username: string) =>
     `/users/validate/?username=${username}`,
   USERS_BY_USERNAMES: (usernames: Array<string>) => {
@@ -62,8 +64,6 @@ class API {
     return ApiMethods.post<{
       id: number;
       username: string;
-      token: string;
-      expiresIn: string;
     }>(url, { username, password });
   };
 
@@ -73,8 +73,25 @@ class API {
       id: number;
       username: string;
       token: string;
-      expiresIn: string;
+      expiresIn: number;
+      refreshToken: string;
+      refreshTokenExpires: Date;
     }>(url, { username, password });
+  };
+
+  static refreshAccessToken = (userID: number) => {
+    const url = ENDPOINTS.REFRESH_ACCESS_TOKEN();
+    return ApiMethods.post<{
+      token: string;
+      expiresIn: number;
+      refreshToken: string;
+      refreshTokenExpires: Date;
+    }>(url, { userID });
+  };
+
+  static invalidateRefreshToken = () => {
+    const url = ENDPOINTS.INVALIDATE_REFRESH_TOKEN();
+    return ApiMethods.post(url, {});
   };
 
   static validateUsername = (username: string) => {
@@ -131,7 +148,6 @@ class API {
   };
 
   static fetchConversationUsers = (conversationId: number) => {
-    console.log('fetchConversationUsers', conversationId);
     const url = ENDPOINTS.CONVERSATION_USERS(conversationId);
     return ApiMethods.get<Array<User>>(url);
   };

@@ -1,23 +1,31 @@
 import axios from 'axios';
+import { redirect } from '@tanstack/react-router';
 import { getHeaders } from './utils/headers';
 import transformKeysToCamelCase from './utils/caseConverter';
-import type { AxiosError } from 'axios';
+import {
+  clearStoredUser,
+  getStoredUser,
+  updateStoredUser,
+} from './utils/localStorage';
+import API from './index';
+import type { AxiosError, InternalAxiosRequestConfig } from 'axios';
 
 const BASE_URL = import.meta.env.VITE_API_URL as string;
 
-// interface CustomAxiosRequestConfig extends AxiosRequestConfig {
-//   _retry?: boolean;
-// }
+type CustomAxiosRequestConfig = InternalAxiosRequestConfig & {
+  _retry?: boolean;
+};
 
 const axiosInstance = axios.create({
   baseURL: BASE_URL,
-  headers: getHeaders(),
+  headers: getHeaders(false),
 });
 
 // Request interceptor to add headers
 axiosInstance.interceptors.request.use((config) => {
-  // console.log('Axios request interceptor:', config);
-  Object.assign(config.headers, getHeaders());
+  const isTokenRefresh = config.url === '/auth/refresh-token';
+
+  Object.assign(config.headers, getHeaders(isTokenRefresh));
   return config;
 });
 
@@ -35,34 +43,50 @@ axiosInstance.interceptors.response.use(
   async (error) => {
     const axiosError = error as AxiosError;
 
-    // console.log('Axios response interceptor error:', axiosError);
-
-    // TODO: Handle token refresh
-
-    // const originalRequest = axiosError.config as CustomAxiosRequestConfig;
+    const originalRequest = axiosError.config as CustomAxiosRequestConfig;
 
     // If the error is due to an expired token (401 Unauthorized)
-    // if (axiosError.response?.status === 401 && !originalRequest._retry) {
-    //   originalRequest._retry = true;
+    if (
+      axiosError.response?.status === 401 &&
+      originalRequest._retry !== true &&
+      originalRequest.url !== '/auth/refresh-token'
+    ) {
+      originalRequest._retry = true;
+      try {
+        const userID = getStoredUser()?.id;
+        if (!userID) {
+          console.error('No user ID found in stored user');
+          return Promise.reject(axiosError);
+        }
 
-    //   try {
-    //     const newToken = await refreshAccessToken(); // Refresh the token
-    //     localStorage.setItem('accessToken', newToken);
-    //     if (!originalRequest.headers) {
-    //       originalRequest.headers = {};
-    //     }
-    //     originalRequest.headers.Authorization = `Bearer ${newToken}`;
-    //     return axiosInstance(originalRequest); // Retry the original request
-    //   } catch (refreshError) {
-    //     const refreshAxiosError = refreshError as AxiosError;
+        const newToken = await API.refreshAccessToken(userID); // Refresh the token
 
-    //     console.error('Failed to refresh token:', refreshAxiosError);
-    //     // Redirect to login or handle logout
-    //     window.location.href = '/login';
-    //     return Promise.reject(refreshAxiosError);
-    //   }
-    // }
+        if (!newToken.data?.token) {
+          console.error('No new token received from refresh token API');
+          return Promise.reject(axiosError);
+        }
 
+        updateStoredUser({
+          jwt: newToken.data.token,
+          refreshToken: newToken.data.refreshToken,
+          refreshTokenExpires: newToken.data.refreshTokenExpires,
+        });
+
+        Object.assign(originalRequest.headers, {
+          Authorization: newToken.data.token,
+        });
+
+        return axiosInstance(originalRequest); // Retry the original request
+      } catch (refreshError) {
+        const refreshAxiosError = refreshError as AxiosError;
+
+        console.error('Failed to refresh token:', refreshAxiosError);
+        clearStoredUser();
+        redirect({ to: '/login', throw: true });
+      }
+    }
+
+    console.error('axiosError at end of interceptor', axiosError);
     return Promise.reject(axiosError);
   }
 );

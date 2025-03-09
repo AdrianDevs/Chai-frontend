@@ -35,7 +35,6 @@ function ConversationUnselectedComponent() {
   };
 
   const handleDeleteConversation = (conversationId: number | null) => {
-    console.log('Deleting conversation', conversationId);
     if (!conversationId) {
       return;
     }
@@ -80,14 +79,12 @@ function ConversationUnselectedComponent() {
   };
 
   if (isDeletingConversation) {
-    console.log('Showing delete conversation dialog');
     const dialog = document.getElementById('delete-conversation-dialog');
     if (dialog) {
       const dialogElement = dialog as HTMLDialogElement;
       dialogElement.showModal();
     }
   } else {
-    console.log('Hiding delete conversation dialog');
     const dialog = document.getElementById('delete-conversation-dialog');
     if (dialog) {
       const dialogElement = dialog as HTMLDialogElement;

@@ -17,11 +17,9 @@ const fallback = '/';
 
 export const Route = createFileRoute('/signup')({
   beforeLoad: ({ context }) => {
-    // console.log('Before load', { context });
     if (context.auth?.isAuthenticated) {
       // TODO update navigate to accept a redirect option from search
       // redirect({ to: search.redirect || fallback, throw: true });
-      console.log('SignUp.beforeload: Redirecting to fallback');
       redirect({ to: fallback, throw: true });
     }
   },
@@ -40,8 +38,6 @@ function SignUpComponent() {
       password: '',
     },
     onSubmit: async (values) => {
-      console.log('Form submitting', values);
-
       try {
         await API.signUp(values.value.username, values.value.password);
         await auth.login(values.value.username, values.value.password);
@@ -107,7 +103,6 @@ function SignUpComponent() {
               onChangeAsyncDebounceMs: 500,
               onChangeAsync: async ({ value }) => {
                 const response = await API.validateUsername(value);
-                console.log('Username validation response', response);
                 if (
                   response.status === 200 &&
                   response.data?.status === 'taken'

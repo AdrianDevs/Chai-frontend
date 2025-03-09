@@ -4,6 +4,7 @@ import {
   Outlet,
   createRootRouteWithContext,
 } from '@tanstack/react-router';
+import type { CustomError } from '../types/error';
 import type { AuthContextType } from '../types/auth';
 
 // import { TanStackRouterDevtools } from '@tanstack/router-devtools';
@@ -21,7 +22,7 @@ const TanStackRouterDevtools =
 
 export type RouterContext = {
   auth?: AuthContextType | null;
-  defaultNotFoundComponent?: React.ReactNode;
+  // defaultNotFoundComponent?: React.ReactNode;
 };
 
 export const Route = createRootRouteWithContext<RouterContext>()({
@@ -39,6 +40,33 @@ export const Route = createRootRouteWithContext<RouterContext>()({
     return (
       <div className="flex flex-col items-center justify-center gap-4">
         <p className="text-2xl">You are lost</p>
+        <Link className="btn btn-primary" to="/">
+          Go home
+        </Link>
+      </div>
+    );
+  },
+  errorComponent: ({ error }) => {
+    const customError = error as CustomError;
+
+    return (
+      <div className="m-8 flex flex-col items-center justify-center gap-4">
+        <p className="text-3xl">An unfortunate error occurred</p>
+        <pre className="flex flex-col gap-2 text-xl">
+          <div className="flex flex-row flex-wrap gap-2">
+            <p className="font-bold">Status:</p>
+            <p className="text-xl">{customError.status}</p>
+          </div>
+          <div className="flex flex-row flex-wrap gap-2">
+            <p className="font-bold">Message:</p>
+            <p className="text-xl">{customError.message}</p>
+          </div>
+          <div className="flex flex-row flex-wrap gap-2">
+            <p className="font-bold">Details:</p>
+            <p className="text-xl">{JSON.stringify(customError.details)}</p>
+          </div>
+        </pre>
+
         <Link className="btn btn-primary" to="/">
           Go home
         </Link>

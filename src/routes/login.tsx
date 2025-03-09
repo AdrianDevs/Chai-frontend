@@ -2,7 +2,6 @@
 import { useForm } from '@tanstack/react-form';
 import {
   createFileRoute,
-  redirect,
   useNavigate,
   useRouter,
 } from '@tanstack/react-router';
@@ -15,10 +14,21 @@ import type { CustomError } from '../types/error';
 const fallback = '/';
 
 export const Route = createFileRoute('/login')({
-  beforeLoad: ({ context }) => {
-    if (context.auth?.isAuthenticated) {
-      console.log('Login.beforeload: Redirecting to fallback');
-      redirect({ to: fallback, throw: true });
+  beforeLoad: async ({ context, search }) => {
+    console.log('Login.beforeload: props');
+    if ('refresh' in search && search.refresh) {
+      console.log('Login.beforeload: Refreshing');
+      console.log('context.auth', context.auth);
+      await context.auth?.logout();
+      // return redirect({ to: '/login' });
+    } else if (context.auth?.isAuthenticated) {
+      console.log(
+        'Login.beforeload: Redirecting to fallback',
+        context.auth.user
+      );
+      // redirect({ to: fallback, throw: true });
+    } else {
+      console.log('Why are we here?');
     }
   },
   component: LoginComponent,
@@ -36,8 +46,6 @@ function LoginComponent() {
       password: '',
     },
     onSubmit: async (values) => {
-      console.log('Form submitting', values);
-
       try {
         await auth.login(values.value.username, values.value.password);
         await router.invalidate({ sync: true });

@@ -48,21 +48,18 @@ function NewConversationComponent() {
       },
     },
     onSubmit: async (values) => {
-      console.log('Form submitting new conversation', values);
       try {
         const usersResponse = await API.fetchUsersByUsernames(
           values.value.invitees.map((invitee) => invitee.username)
         );
-        console.log('users', usersResponse.data);
         if (!usersResponse.data || usersResponse.data.length === 0) {
           throw new Error('No users found');
         }
 
-        const conversationResponse = await API.createConversation(
+        await API.createConversation(
           values.value.conversationName,
           usersResponse.data
         );
-        console.log('conversation', conversationResponse.data);
 
         await router.invalidate({ sync: true });
         await navigate({ to: fallback });

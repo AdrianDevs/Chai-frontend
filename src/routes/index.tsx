@@ -19,10 +19,12 @@ function Index() {
   const auth = useAuth();
 
   const logout = () => {
-    auth.logout();
-    router.invalidate().catch((error) => {
-      console.error('Failed to navigate', error);
-    });
+    auth
+      .logout()
+      .then(() => router.invalidate())
+      .catch((error) => {
+        console.error('Failed to navigate', error);
+      });
   };
 
   return (

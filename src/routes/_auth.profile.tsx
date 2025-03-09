@@ -34,28 +34,25 @@ function RouteComponent() {
   };
 
   const handleDeleteProfile = () => {
-    console.log('Deleting profile and all data');
     setIsDeletingProfileDialogOpen(true);
   };
 
   const handleDeleteProfileCancel = () => {
-    console.log('Deleting profile and all data');
     setIsDeletingProfileDialogOpen(false);
   };
 
   const handleDeleteProfileConfirm = () => {
-    console.log('Deleting profile and all data');
-
     setIsDeletingProfile(true);
 
     API.deleteProfile()
       .then(() => new Promise((resolve) => setTimeout(resolve, 1000)))
+      .then(() => API.invalidateRefreshToken())
       .then(() => router.invalidate())
+      .then(() => auth.logout())
       .catch((err) => {
         console.error('Failed to delete profile', err);
       })
       .finally(() => {
-        auth.logout();
         setIsDeletingProfile(false);
         setIsDeletingProfileDialogOpen(false);
         navigate({ to: fallback, replace: true }).catch((err) => {
