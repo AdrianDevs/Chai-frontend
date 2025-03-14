@@ -9,16 +9,19 @@ import {
   useRouter,
 } from '@tanstack/react-router';
 import { useForm } from '@tanstack/react-form';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { FaTrash } from 'react-icons/fa6';
 import API from '../services/api';
 import Title from '../components/title';
 import { useAuth } from '../hooks/useAuth';
 import FieldTextBox from '../components/fieldTextBox';
 import { convertDateStringToLocaleString, getUserFromId } from '../utils/user';
+import useWebSocket from '../hooks/webSocketHook';
 import type { Message } from '../services/api/types';
 
 const fallback = '/conversations';
+const pageDefault = 0;
+const limitDefault = 10;
 
 export const Route = createFileRoute('/_auth/conversations/$conversationId')({
   beforeLoad: ({ context, location }) => {
@@ -38,8 +41,8 @@ export const Route = createFileRoute('/_auth/conversations/$conversationId')({
 
       const messagesResponse = await API.fetchConversationMessages(
         Number(params.conversationId),
-        0,
-        10
+        pageDefault,
+        limitDefault
       );
 
       const usersResponse = await API.fetchConversationUsers(
@@ -76,12 +79,50 @@ function ConversationSelectedComponent() {
   const navigate = useNavigate({ from: '/conversations/$conversationId' });
   const [userToDelete, setUserToDelete] = useState<number | null>(null);
   const [isDeletingUser, setIsDeletingUser] = useState<boolean>(false);
+  const ws = useWebSocket({
+    url: 'ws://localhost:8080',
+    retryAttempts: 3,
+    retryInterval: 1000,
+  });
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
 
   const navigateToFallback = () => {
     navigate({ to: fallback, replace: true }).catch((err) => {
       console.error('Failed to navigate', err);
     });
     return;
+  };
+
+  useEffect(() => {
+    console.log('useEffect init');
+  }, []);
+
+  useEffect(() => {
+    console.log('useEffect ws.connected', ws.isConnected);
+    if (ws.isConnected && ws.send) {
+      ws.send(`Hello from ${auth.user?.username}`);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ws.isConnected, auth.user?.username]);
+
+  useEffect(() => {
+    console.log('useEffect ws.data', ws.data);
+  }, [ws.data]);
+
+  useEffect(() => {
+    console.log('scroll to bottom');
+    scrollToBottom();
+  }, [messages]);
+
+  const scrollToBottom = () => {
+    console.log('scrollToBottom');
+    if (messagesContainerRef.current) {
+      console.log('- have ref');
+      messagesContainerRef.current.scrollTop =
+        messagesContainerRef.current.scrollHeight;
+    } else {
+      console.log('- do not have ref');
+    }
   };
 
   const form = useForm({
@@ -96,6 +137,12 @@ function ConversationSelectedComponent() {
           throw new Error('User ID and conversation ID are required');
         }
 
+        if (ws.send) {
+          ws.send(
+            `[webSocket client ${auth.user?.username}] ${values.value.content}`
+          );
+        }
+
         await API.createConversationMessage(values.value.conversationId, {
           content: values.value.content,
           userId: values.value.userId,
@@ -103,6 +150,8 @@ function ConversationSelectedComponent() {
         });
         form.reset();
         await router.invalidate({ sync: true });
+        // Scroll to bottom after message is sent
+        scrollToBottom();
       } catch (err) {
         console.error('Failed to create message', err);
       }
@@ -241,47 +290,52 @@ function ConversationSelectedComponent() {
     }, [] as Array<Message>);
 
     return (
-      <div className="mt-4 w-full">
-        {reversedMessages.map((message) => {
-          const username = users
-            ? (getUserFromId(users, message.userId)?.username ?? 'Unknown')
-            : 'Unknown';
+      <div
+        className="mt-4 flex h-full w-full grow flex-col overflow-y-auto"
+        ref={messagesContainerRef}
+      >
+        <div className="flex h-auto grow flex-col place-items-end justify-end">
+          {reversedMessages.map((message) => {
+            const username = users
+              ? (getUserFromId(users, message.userId)?.username ?? 'Unknown')
+              : 'Unknown';
 
-          const createdAt = convertDateStringToLocaleString(
-            message.createdAt.toString()
-          );
+            const createdAt = convertDateStringToLocaleString(
+              message.createdAt.toString()
+            );
 
-          if (message.userId === auth.user?.id) {
-            return (
-              <div className={`chat-end chat`} key={message.id}>
-                <div className={`chat-bubble chat-bubble-primary`}>
-                  {message.content}
-                  <p className="text-xs text-primary-content/50">
-                    From {username} at {createdAt}
-                  </p>
+            if (message.userId === auth.user?.id) {
+              return (
+                <div className={`chat-end chat`} key={message.id}>
+                  <div className={`chat-bubble chat-bubble-primary`}>
+                    {message.content}
+                    <p className="text-xs text-primary-content/50">
+                      From {username} at {createdAt}
+                    </p>
+                  </div>
                 </div>
-              </div>
-            );
-          } else {
-            return (
-              <div className={`chat-start chat`} key={message.id}>
-                <div className={`chat-bubble chat-bubble-secondary`}>
-                  {message.content}
-                  <p className="text-xs text-primary-content/50">
-                    From {username} at {createdAt}
-                  </p>
+              );
+            } else {
+              return (
+                <div className={`chat-start chat`} key={message.id}>
+                  <div className={`chat-bubble chat-bubble-secondary`}>
+                    {message.content}
+                    <p className="text-xs text-primary-content/50">
+                      From {username} at {createdAt}
+                    </p>
+                  </div>
                 </div>
-              </div>
-            );
-          }
-        })}
+              );
+            }
+          })}
+        </div>
       </div>
     );
   };
 
   const createMessage = () => {
     return (
-      <div className="p-4">
+      <div className="grow-0 p-4">
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -345,7 +399,7 @@ function ConversationSelectedComponent() {
 
   return (
     // <div className="m-4 flex min-w-xs flex-col items-center justify-center bg-base-100">
-    <div className="flex max-w-md flex-col content-center items-center justify-center gap-4 p-4">
+    <div className="flex h-[calc(100vh-4rem)] max-w-md flex-col content-center items-center justify-start gap-4 p-4">
       {/* <div className="flex flex-col items-center gap-4 pr-8 pl-8"> */}
       <Title onClick={navigateToFallback}>{conversation.name}</Title>
       <div className="flex w-full flex-row flex-wrap justify-center gap-2 rounded-lg bg-accent pt-4 pb-4">
@@ -353,7 +407,7 @@ function ConversationSelectedComponent() {
         <Outlet />
       </div>
 
-      <div className="flex w-full flex-col items-center gap-4 rounded-lg bg-info">
+      <div className="flex h-[300px] w-full grow flex-col items-center gap-4 rounded-lg bg-info">
         {renderMessages()}
         {createMessage()}
       </div>
