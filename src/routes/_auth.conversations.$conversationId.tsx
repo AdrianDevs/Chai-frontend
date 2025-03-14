@@ -90,7 +90,7 @@ function ConversationSelectedComponent() {
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const ws = useWebSocket({
-    url: 'ws://localhost:8080',
+    url: `ws://localhost:8080/conversations/${conversation?.id}?token=${auth.user?.jwt}`,
     retryAttempts: 3,
     retryInterval: 1000,
   });
@@ -155,10 +155,6 @@ function ConversationSelectedComponent() {
   };
 
   useEffect(() => {
-    console.log('useEffect init');
-  }, []);
-
-  useEffect(() => {
     console.log('useEffect ws.connected', ws.isConnected);
     if (ws.isConnected && ws.send) {
       ws.send(`Hello from ${auth.user?.username}`);
@@ -167,23 +163,13 @@ function ConversationSelectedComponent() {
   }, [ws.isConnected, auth.user?.username]);
 
   useEffect(() => {
-    console.log('useEffect ws.data', ws.data);
-  }, [ws.data]);
-
-  useEffect(() => {
-    console.log('scroll to bottom');
-    console.log('last message', messages[messages.length - 1].content);
     scrollToBottom();
   }, [messages]);
 
   const scrollToBottom = () => {
-    console.log('scrollToBottom');
     if (messagesContainerRef.current) {
-      console.log('- have ref');
       messagesContainerRef.current.scrollTop =
         messagesContainerRef.current.scrollHeight;
-    } else {
-      console.log('- do not have ref');
     }
   };
 
@@ -478,7 +464,7 @@ function ConversationSelectedComponent() {
     <div className="flex h-[calc(100vh-4rem)] max-w-md flex-col content-center items-center justify-start gap-4 p-4">
       {/* <div className="flex flex-col items-center gap-4 pr-8 pl-8"> */}
       <Title onClick={navigateToFallback}>{conversation.name}</Title>
-      <div className="flex w-full flex-row flex-wrap justify-center gap-2 rounded-lg bg-accent pt-4 pb-4">
+      <div className="flex w-full flex-row flex-wrap justify-center gap-2 rounded-lg bg-accent p-4">
         {renderUsers()}
         <Outlet />
       </div>

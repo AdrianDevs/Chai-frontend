@@ -14,7 +14,7 @@ export const getHeaders = (isTokenRefresh: boolean): Record<string, string> => {
 
   return {
     'Content-Type': 'application/json',
-    Authorization: token ?? '',
+    Authorization: 'Bearer ' + token,
     credentials: 'include',
   };
 };

@@ -24,7 +24,6 @@ const axiosInstance = axios.create({
 // Request interceptor to add headers
 axiosInstance.interceptors.request.use((config) => {
   const isTokenRefresh = config.url === '/auth/refresh-token';
-
   Object.assign(config.headers, getHeaders(isTokenRefresh));
   return config;
 });
@@ -73,7 +72,7 @@ axiosInstance.interceptors.response.use(
         });
 
         Object.assign(originalRequest.headers, {
-          Authorization: newToken.data.token,
+          Authorization: 'Bearer ' + newToken.data.token,
         });
 
         return axiosInstance(originalRequest); // Retry the original request
