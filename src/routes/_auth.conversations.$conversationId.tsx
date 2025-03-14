@@ -9,7 +9,7 @@ import {
   useRouter,
 } from '@tanstack/react-router';
 import { useForm } from '@tanstack/react-form';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { FaTrash } from 'react-icons/fa6';
 import API from '../services/api';
 import Title from '../components/title';
@@ -20,7 +20,7 @@ import useWebSocket from '../hooks/webSocketHook';
 import type { Message } from '../services/api/types';
 
 const fallback = '/conversations';
-const pageDefault = 0;
+const offSetDefault = 0;
 const limitDefault = 10;
 
 export const Route = createFileRoute('/_auth/conversations/$conversationId')({
@@ -41,7 +41,7 @@ export const Route = createFileRoute('/_auth/conversations/$conversationId')({
 
       const messagesResponse = await API.fetchConversationMessages(
         Number(params.conversationId),
-        pageDefault,
+        offSetDefault,
         limitDefault
       );
 
@@ -73,18 +73,79 @@ export const Route = createFileRoute('/_auth/conversations/$conversationId')({
 });
 
 function ConversationSelectedComponent() {
-  const { conversation, messages, users } = Route.useLoaderData();
+  const {
+    conversation,
+    messages: initialMessages,
+    users,
+  } = Route.useLoaderData();
   const auth = useAuth();
   const router = useRouter();
   const navigate = useNavigate({ from: '/conversations/$conversationId' });
   const [userToDelete, setUserToDelete] = useState<number | null>(null);
   const [isDeletingUser, setIsDeletingUser] = useState<boolean>(false);
+  const [messages, setMessages] = useState<Array<Message>>(
+    initialMessages ?? []
+  );
+  const [currentOffSet, setCurrentOffSet] = useState(offSetDefault);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
   const ws = useWebSocket({
     url: 'ws://localhost:8080',
     retryAttempts: 3,
     retryInterval: 1000,
   });
   const messagesContainerRef = useRef<HTMLDivElement>(null);
+
+  const loadMoreMessages = useCallback(async () => {
+    if (isLoadingMore || !hasMore || !conversation) return;
+
+    setIsLoadingMore(true);
+    try {
+      const nextOffSet = currentOffSet + limitDefault;
+      const response = await API.fetchConversationMessages(
+        conversation.id,
+        nextOffSet,
+        limitDefault
+      );
+
+      if (!response.data || response.data.length === 0) {
+        setHasMore(false);
+        return;
+      }
+
+      const newMessages = response.data;
+
+      // Only add messages from newMessages that are not already in messages
+      const newMessagesUnique = newMessages.filter(
+        (message) => !messages.some((m) => m.id === message.id)
+      );
+
+      setMessages([...messages, ...newMessagesUnique]);
+      setCurrentOffSet(nextOffSet);
+    } catch (err) {
+      console.error('Failed to fetch more messages', err);
+    } finally {
+      setIsLoadingMore(false);
+    }
+  }, [conversation, currentOffSet, hasMore, isLoadingMore, messages]);
+
+  const handleScroll = useCallback(() => {
+    if (!messagesContainerRef.current) return;
+
+    const { scrollTop } = messagesContainerRef.current;
+    // If we're near the top (within 100px), load more messages
+    if (scrollTop < 100) {
+      void loadMoreMessages();
+    }
+  }, [loadMoreMessages]);
+
+  useEffect(() => {
+    const container = messagesContainerRef.current;
+    if (!container) return;
+
+    container.addEventListener('scroll', handleScroll);
+    return () => container.removeEventListener('scroll', handleScroll);
+  }, [handleScroll]);
 
   const navigateToFallback = () => {
     navigate({ to: fallback, replace: true }).catch((err) => {
@@ -111,6 +172,7 @@ function ConversationSelectedComponent() {
 
   useEffect(() => {
     console.log('scroll to bottom');
+    console.log('last message', messages[messages.length - 1].content);
     scrollToBottom();
   }, [messages]);
 
@@ -143,13 +205,22 @@ function ConversationSelectedComponent() {
           );
         }
 
-        await API.createConversationMessage(values.value.conversationId, {
-          content: values.value.content,
-          userId: values.value.userId,
-          conversationId: values.value.conversationId,
-        });
+        const response = await API.createConversationMessage(
+          values.value.conversationId,
+          {
+            content: values.value.content,
+            userId: values.value.userId,
+            conversationId: values.value.conversationId,
+          }
+        );
+
+        const newMessage = response.data;
+        if (newMessage) {
+          setMessages((prevMessages) => [newMessage, ...prevMessages]);
+        }
+
         form.reset();
-        await router.invalidate({ sync: true });
+        await router.invalidate();
         // Scroll to bottom after message is sent
         scrollToBottom();
       } catch (err) {
@@ -280,7 +351,7 @@ function ConversationSelectedComponent() {
   };
 
   const renderMessages = () => {
-    if (!messages || messages.length === 0) {
+    if (messages.length === 0) {
       return <div>No messages</div>;
     }
 
@@ -294,7 +365,12 @@ function ConversationSelectedComponent() {
         className="mt-4 flex h-full w-full grow flex-col overflow-y-auto"
         ref={messagesContainerRef}
       >
-        <div className="flex h-auto grow flex-col place-items-end justify-end">
+        {isLoadingMore && (
+          <div className="flex justify-center p-4">
+            <span className="loading loading-md loading-spinner"></span>
+          </div>
+        )}
+        <div className="flex h-auto w-full grow flex-col justify-end">
           {reversedMessages.map((message) => {
             const username = users
               ? (getUserFromId(users, message.userId)?.username ?? 'Unknown')

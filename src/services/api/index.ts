@@ -144,7 +144,7 @@ class API {
     message: Omit<Message, 'id' | 'createdAt'>
   ) => {
     const url = ENDPOINTS.CREATE_CONVERSATION_MESSAGE(conversationId);
-    return ApiMethods.post<Omit<Message, 'id' | 'createdAt'>>(url, message);
+    return ApiMethods.post<Message>(url, message);
   };
 
   static fetchConversationUsers = (conversationId: number) => {
