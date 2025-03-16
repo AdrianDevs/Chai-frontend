@@ -15,18 +15,13 @@ const fallback = '/';
 
 export const Route = createFileRoute('/login')({
   beforeLoad: async ({ context, search }) => {
-    console.log('Login.beforeload: props');
     if ('refresh' in search && search.refresh) {
-      console.log('Login.beforeload: Refreshing');
-      console.log('context.auth', context.auth);
       await context.auth?.logout();
-      // return redirect({ to: '/login' });
     } else if (context.auth?.isAuthenticated) {
       console.log(
         'Login.beforeload: Redirecting to fallback',
         context.auth.user
       );
-      // redirect({ to: fallback, throw: true });
     } else {
       console.log('Why are we here?');
     }

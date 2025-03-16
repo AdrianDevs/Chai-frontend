@@ -89,10 +89,18 @@ function ConversationSelectedComponent() {
   const [currentOffSet, setCurrentOffSet] = useState(offSetDefault);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
+
+  // console.log('auth.user?.websocketToken', auth.user?.webSocketToken);
+  // console.log(
+  //   'websocket url',
+  //   `ws://localhost:8080/conversations/${conversation?.id}?userID=${auth.user?.id}&token=${auth.user?.webSocketToken}`
+  // );
+
   const ws = useWebSocket({
-    url: `ws://localhost:8080/conversations/${conversation?.id}?token=${auth.user?.jwt}`,
-    retryAttempts: 3,
+    url: `ws://localhost:8080/conversations/${conversation?.id}`,
+    retryAttempts: 1,
     retryInterval: 1000,
+    token: auth.user?.jwt ?? '',
   });
   const messagesContainerRef = useRef<HTMLDivElement>(null);
 
@@ -186,9 +194,7 @@ function ConversationSelectedComponent() {
         }
 
         if (ws.send) {
-          ws.send(
-            `[webSocket client ${auth.user?.username}] ${values.value.content}`
-          );
+          ws.send(values.value.content);
         }
 
         const response = await API.createConversationMessage(

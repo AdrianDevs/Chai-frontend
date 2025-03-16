@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useAuth } from './useAuth';
 
 /**
  * @param url - The URL of the WebSocket server
@@ -9,6 +10,7 @@ type WebSocketHookProps = {
   url: string;
   retryAttempts: number;
   retryInterval: number;
+  // token: string;
 };
 
 type MessageData = {
@@ -20,36 +22,58 @@ function useWebSocket({
   url,
   retryAttempts = 3,
   retryInterval = 1500,
+  // token,
 }: WebSocketHookProps) {
   const [isConnected, setIsConnected] = useState(false);
   const [retryAttempt, setRetryAttempt] = useState(0);
   const [data, setData] = useState<MessageData | null>(null);
   const [send, setSend] = useState<((message: string) => void) | null>(null);
   const socketRef = useRef<WebSocket | null>(null);
+  const auth = useAuth();
 
   useEffect(() => {
-    console.log('WebSocket useEffect init');
+    console.log('[WebSocket] useEffect init');
     // Only create socket if it doesn't exist
     if (!socketRef.current) {
-      console.log('WebSocket creating new socket');
-      socketRef.current = new WebSocket(url);
+      const fullUrl = `${url}?userID=${auth.user?.id}&token=${auth.user?.webSocketToken}`;
+      console.log('[WebSocket] creating new socket with url', fullUrl);
+      socketRef.current = new WebSocket(fullUrl);
     }
 
     const socket = socketRef.current;
 
     socket.onopen = () => {
-      console.log('WebSocket connection opened');
+      console.log('[WebSocket] connection opened');
+
+      // Send an initial payload with websocket token
+      socket.send(
+        JSON.stringify({
+          type: 'authenticate',
+          token: auth.user?.jwt ?? '',
+          timestamp: Date.now(),
+          message: 'websocket client connection request',
+        })
+      );
+
       setIsConnected(true);
 
       // function to send messages
       setSend(() => {
-        return (_data: { message: string; timestamp: number }) => {
+        return (_data: { message: string }) => {
           try {
-            console.log('WebSocket sending message:', _data);
-            socket.send(JSON.stringify(_data));
+            console.log('[WebSocket] sending message:', _data);
+
+            const dataWithAuth = {
+              type: 'message',
+              token: auth.user?.jwt ?? '',
+              timestamp: Date.now(),
+              message: _data,
+            };
+
+            socket.send(JSON.stringify(dataWithAuth));
             return true;
           } catch (error) {
-            console.error('Error sending message:', error);
+            console.error('[WebSocket] error sending message:', error);
             return false;
           }
         };
@@ -65,7 +89,8 @@ function useWebSocket({
         ) {
           return;
         }
-        console.log('WebSocket message received:', event.data);
+        console.log('[WebSocket] message received:', event.data);
+
         // if the message is from the webSocket, don't set the data
         if (
           messageData.message
@@ -78,13 +103,50 @@ function useWebSocket({
       };
     };
 
+    socket.onmessage = (event: MessageEvent<string>) => {
+      console.log('[WebSocket] message received:', event.data);
+    };
+
     // on close should update isConnected to false and retry connection
-    socket.onclose = () => {
-      console.log('WebSocket connection closed');
+    socket.onclose = async (event: CloseEvent) => {
+      console.log('[WebSocket] connection closed', event);
       setIsConnected(false);
       socketRef.current = null; // Clear the ref when connection is closed
+
+      // connection closed with code 1006 likely due to token expiration
+      if (event.code === 1006) {
+        console.log(
+          '[WebSocket] connection closed with code 1006 likely due to token expiration'
+        );
+        // Check if refresh token is expired
+        const tokenExpiryEpoch = auth.user?.webSocketTokenExpiryEpoch;
+        if (tokenExpiryEpoch) {
+          const currentEpoch = Date.now();
+          if (currentEpoch > tokenExpiryEpoch) {
+            console.log('[WebSocket] refresh token is expired');
+            // refresh token
+            const userID = auth.user?.id;
+            if (userID) {
+              console.log('[WebSocket] refreshing token');
+              await auth.update();
+              // const newTokensResponse = await API.refreshTokens(userID);
+              // if (newTokensResponse.data) {
+              //   console.log('[WebSocket] new tokens received');
+              //   updateStoredUser(newTokensResponse.data);
+              // }
+            }
+          }
+        } else {
+          console.log('[WebSocket] no refresh token found');
+        }
+
+        setIsConnected(false);
+        socketRef.current = null; // Clear the ref when connection is closed
+      }
+
       // retry connection
       if (retryAttempt < retryAttempts) {
+        console.log('[WebSocket] retrying connection');
         setTimeout(() => {
           setRetryAttempt(retryAttempt + 1);
         }, retryInterval);
@@ -92,7 +154,7 @@ function useWebSocket({
     };
 
     socket.onerror = (event: Event) => {
-      console.error('WebSocket error:', event);
+      console.error('[WebSocket] error:', event);
       setIsConnected(false);
       socketRef.current?.close();
       socketRef.current = null; // Clear the ref when connection is closed
@@ -100,13 +162,22 @@ function useWebSocket({
 
     // terminate connection on unmount
     return () => {
-      console.log('WebSocket terminating connection');
+      console.log('[WebSocket] terminating connection');
       if (socketRef.current) {
         socketRef.current.close();
         socketRef.current = null;
       }
     };
-  }, [retryAttempt, retryAttempts, retryInterval, url]);
+  }, [
+    auth,
+    auth.user?.id,
+    auth.user?.webSocketToken,
+    auth.user?.webSocketTokenExpiryEpoch,
+    retryAttempt,
+    retryAttempts,
+    retryInterval,
+    url,
+  ]);
 
   return { send, data, isConnected };
 }

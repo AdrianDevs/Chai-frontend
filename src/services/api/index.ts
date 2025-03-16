@@ -11,7 +11,7 @@ const ENDPOINTS = {
   INFO: () => '/info',
   SIGNUP: () => '/auth/signup',
   LOGIN: () => '/auth/login',
-  REFRESH_ACCESS_TOKEN: () => '/auth/refresh-token',
+  REFRESH_TOKENS: () => '/auth/refresh-tokens',
   INVALIDATE_REFRESH_TOKEN: () => '/auth/revoke-token',
   VALIDATE_USERNAME: (username: string) =>
     `/users/validate/?username=${username}`,
@@ -72,20 +72,36 @@ class API {
     return ApiMethods.post<{
       id: number;
       username: string;
-      token: string;
-      expiresIn: number;
+      jwt: string;
+      expiryDate: Date;
+      expiryEpoch: number;
+      expiresInSeconds: number;
       refreshToken: string;
-      refreshTokenExpires: Date;
+      refreshTokenExpiryDate: Date;
+      refreshTokenExpiryEpoch: number;
+      refreshTokenExpiresInSeconds: number;
+      webSocketToken: string;
+      webSocketTokenExpiryDate: Date;
+      webSocketTokenExpiryEpoch: number;
+      webSocketTokenExpiresInSeconds: number;
     }>(url, { username, password });
   };
 
-  static refreshAccessToken = (userID: number) => {
-    const url = ENDPOINTS.REFRESH_ACCESS_TOKEN();
+  static refreshTokens = (userID: number) => {
+    const url = ENDPOINTS.REFRESH_TOKENS();
     return ApiMethods.post<{
       token: string;
-      expiresIn: number;
+      expiryDate: Date;
+      expiryEpoch: number;
+      expiresInSeconds: number;
       refreshToken: string;
-      refreshTokenExpires: Date;
+      refreshTokenExpiryDate: Date;
+      refreshTokenExpiryEpoch: number;
+      refreshTokenExpiresInSeconds: number;
+      webSocketToken: string;
+      webSocketTokenExpiryDate: Date;
+      webSocketTokenExpiryEpoch: number;
+      webSocketTokenExpiresInSeconds: number;
     }>(url, { userID });
   };
 
