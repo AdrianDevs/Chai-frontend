@@ -21,7 +21,7 @@ import type { Message } from '../services/api/types';
 
 const fallback = '/conversations';
 const offSetDefault = 0;
-const limitDefault = 10;
+const limitDefault = 50;
 
 export const Route = createFileRoute('/_auth/conversations/$conversationId')({
   beforeLoad: ({ context, location }) => {
@@ -90,17 +90,11 @@ function ConversationSelectedComponent() {
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
 
-  // console.log('auth.user?.websocketToken', auth.user?.webSocketToken);
-  // console.log(
-  //   'websocket url',
-  //   `ws://localhost:8080/conversations/${conversation?.id}?userID=${auth.user?.id}&token=${auth.user?.webSocketToken}`
-  // );
-
   const ws = useWebSocket({
     url: `ws://localhost:8080/conversations/${conversation?.id}`,
     retryAttempts: 1,
     retryInterval: 1000,
-    token: auth.user?.jwt ?? '',
+    // token: auth.user?.jwt ?? '',
   });
   const messagesContainerRef = useRef<HTMLDivElement>(null);
 
@@ -162,13 +156,28 @@ function ConversationSelectedComponent() {
     return;
   };
 
+  // useEffect(() => {
+  //   console.log('useEffect ws.connected', ws.isConnected);
+  //   if (ws.isConnected && ws.send) {
+  //     const message: Message = {
+  //       content: `Hello from ${auth.user?.username}`,
+  //       createdAt: new Date(),
+  //       userId: auth.user?.id ?? 0,
+  //       conversationId: conversation?.id ?? 0,
+  //     };
+
+  //     ws.send(message);
+  //   }
+  //   // eslint-disable-next-line react-hooks/exhaustive-deps
+  // }, [ws.isConnected, auth.user?.username]);
+
   useEffect(() => {
-    console.log('useEffect ws.connected', ws.isConnected);
-    if (ws.isConnected && ws.send) {
-      ws.send(`Hello from ${auth.user?.username}`);
+    console.log('useEffect ws.data', ws.data);
+    if (ws.isConnected && ws.data) {
+      const message = ws.data;
+      setMessages((prevMessages) => [message, ...prevMessages]);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ws.isConnected, auth.user?.username]);
+  }, [ws.isConnected, ws.data]);
 
   useEffect(() => {
     scrollToBottom();
@@ -193,10 +202,6 @@ function ConversationSelectedComponent() {
           throw new Error('User ID and conversation ID are required');
         }
 
-        if (ws.send) {
-          ws.send(values.value.content);
-        }
-
         const response = await API.createConversationMessage(
           values.value.conversationId,
           {
@@ -209,10 +214,14 @@ function ConversationSelectedComponent() {
         const newMessage = response.data;
         if (newMessage) {
           setMessages((prevMessages) => [newMessage, ...prevMessages]);
+          if (ws.send) {
+            ws.send(newMessage);
+          }
         }
 
         form.reset();
         await router.invalidate();
+
         // Scroll to bottom after message is sent
         scrollToBottom();
       } catch (err) {
