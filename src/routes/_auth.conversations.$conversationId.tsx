@@ -90,6 +90,7 @@ function ConversationSelectedComponent() {
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
 
+  // console.log('[ConversationSelectedComponent] === useWebSocket ===');
   const ws = useWebSocket({
     url: `ws://localhost:8080/conversations/${conversation?.id}`,
     retryAttempts: 1,
@@ -172,12 +173,12 @@ function ConversationSelectedComponent() {
   // }, [ws.isConnected, auth.user?.username]);
 
   useEffect(() => {
-    console.log('useEffect ws.data', ws.data);
-    if (ws.isConnected && ws.data) {
+    // console.log('useEffect ws.data', ws.data);
+    if (ws.data) {
       const message = ws.data;
       setMessages((prevMessages) => [message, ...prevMessages]);
     }
-  }, [ws.isConnected, ws.data]);
+  }, [ws.data]);
 
   useEffect(() => {
     scrollToBottom();
@@ -214,9 +215,7 @@ function ConversationSelectedComponent() {
         const newMessage = response.data;
         if (newMessage) {
           setMessages((prevMessages) => [newMessage, ...prevMessages]);
-          if (ws.send) {
-            ws.send(newMessage);
-          }
+          ws.send(newMessage);
         }
 
         form.reset();

@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { parseWebSocketMessage } from '../utils/websocketUtils';
 import { useAuth } from './useAuth';
 import type { Message } from '../services/api/types';
 
@@ -11,283 +12,269 @@ type WebSocketHookProps = {
   url: string;
   retryAttempts: number;
   retryInterval: number;
-  // token: string;
 };
 
-export type WebSocketMessage = {
-  type: 'authenticate' | 'message' | 'info' | 'error' | 'unknown';
-  isValid: boolean;
-  content: Message | string;
+type NamedWebSocket = WebSocket & {
+  name: string;
 };
 
 function useWebSocket({
   url,
   retryAttempts = 3,
   retryInterval = 1500,
-  // token,
 }: WebSocketHookProps) {
   const [isConnected, setIsConnected] = useState(false);
   const [retryAttempt, setRetryAttempt] = useState(0);
   const [data, setData] = useState<Message | null>(null);
-  const [send, setSend] = useState<((message: Message) => void) | null>(null);
-  const socketRef = useRef<WebSocket | null>(null);
+  const socketRef = useRef<NamedWebSocket | null>(null);
   const auth = useAuth();
 
-  useEffect(() => {
-    console.log('[WebSocket] useEffect init');
-    // Only create socket if it doesn't exist
-    if (!socketRef.current) {
-      const fullUrl = `${url}?userID=${auth.user?.id}&token=${auth.user?.webSocketToken}`;
-      console.log('[WebSocket] creating new socket with url', fullUrl);
-      socketRef.current = new WebSocket(fullUrl);
+  const handleMessage = useCallback(
+    (event: MessageEvent<string>) => {
+      console.log('[WebSocket] message received:', event.data);
+      const message = parseWebSocketMessage(event.data);
+      console.log('[WebSocket] parsed message:', message);
+
+      switch (message.type) {
+        case 'message':
+          if (
+            message.content &&
+            typeof message.content === 'object' &&
+            'userId' in message.content
+          ) {
+            const chatMessage = message.content as Message;
+            if (chatMessage.userId === auth.user?.id) {
+              console.log('[WebSocket] message is from self, ignoring');
+              return;
+            }
+            setData(chatMessage);
+          }
+          break;
+        case 'error':
+          console.error(
+            '[WebSocket] error message received:',
+            message.content,
+            message.message
+          );
+          break;
+        case 'info':
+          console.log('[WebSocket] info message received:', message.content);
+          break;
+        case 'authenticate':
+          console.log(
+            '[WebSocket] authenticate message received:',
+            message.content
+          );
+          break;
+        case 'unknown':
+          console.warn(
+            '[WebSocket] unknown message received:',
+            message.content
+          );
+          break;
+      }
+    },
+    [auth.user?.id]
+  );
+
+  const connect = useCallback(() => {
+    // Don't create a new connection if we already have one
+    console.log('[WebSocket] === connect ===');
+    console.log(
+      '[WebSocket] socketRef.current?.readyState:',
+      socketRef.current?.readyState
+    );
+
+    if (
+      socketRef.current?.readyState === WebSocket.OPEN ||
+      socketRef.current?.readyState === WebSocket.CONNECTING
+    ) {
+      console.log('[WebSocket] connection already exists, skipping');
+      return;
     }
 
-    const socket = socketRef.current;
+    if (!auth.user?.id || !auth.user.webSocketToken) {
+      console.log('[WebSocket] no auth user or token, skipping connection');
+      return;
+    }
+
+    const fullUrl = `${url}?userID=${auth.user.id}&token=${auth.user.webSocketToken}`;
+    console.log('[WebSocket] creating new socket with url', fullUrl);
+
+    const socket = new WebSocket(fullUrl) as NamedWebSocket;
+    socket.name = `${auth.user.id}-${Date.now()}`;
+    socketRef.current = socket;
+    console.log(`[WebSocket][${socket.name}] created new socket`);
 
     socket.onopen = () => {
-      console.log('[WebSocket] connection opened');
-
-      // Send an initial payload with websocket token
-      socket.send(
-        JSON.stringify({
-          type: 'authenticate',
-          token: auth.user?.jwt ?? '',
-          timestamp: Date.now(),
-          message: 'websocket client connection request',
-        })
+      console.group(`[WebSocket][${socket.name}] connection opened`);
+      console.log(`[WebSocket][${socket.name}] readyState`, socket.readyState);
+      console.log(
+        `[WebSocket][${socket.name}] socketRef.current.name`,
+        socketRef.current?.name
       );
+      console.log(
+        `[WebSocket][${socket.name}] socketRef.current.readyState`,
+        socketRef.current?.readyState
+      );
+      console.groupEnd();
 
+      // If socket and socketRef.current are not the same, and socket is open,
+      // and socketRef.current is either open or connecting,
+      // then we need to close the open socket
+      if (
+        socketRef.current &&
+        socket !== socketRef.current &&
+        socket.readyState === WebSocket.OPEN &&
+        (socketRef.current.readyState === WebSocket.OPEN ||
+          socketRef.current.readyState === WebSocket.CONNECTING)
+      ) {
+        console.log(
+          `[WebSocket][${socket.name}] closing webSocket ${socket.name}`
+        );
+        socket.close();
+        return;
+      }
       setIsConnected(true);
 
-      // function to send messages
-      setSend(() => {
-        return (_data: { message: string }) => {
-          try {
-            console.log('[WebSocket] sending message:', _data);
-
-            const dataWithAuth = {
-              type: 'message',
-              token: auth.user?.jwt ?? '',
-              timestamp: Date.now(),
-              message: _data,
-            };
-
-            socket.send(JSON.stringify(dataWithAuth));
-            return true;
-          } catch (error) {
-            console.error('[WebSocket] error sending message:', error);
-            return false;
-          }
-        };
-      });
-
-      // receive messages
-      socket.onmessage = (event: MessageEvent<string>) => {
-        console.log('WebSocket message received:', event.data);
-
-        const messageData = parseMessage(event.data);
-        console.log('[WebSocket] messageData:', messageData);
-
-        if (messageData.type === 'error') {
-          console.error('[WebSocket] error message received:', messageData);
-          return;
-        }
-        if (messageData.type === 'unknown') {
-          console.error('[WebSocket] unknown message received:', messageData);
-          return;
-        }
-        if (messageData.type === 'authenticate') {
-          console.log(
-            '[WebSocket] authenticate message received - do nothing:',
-            messageData
-          );
-          return;
-        }
-        if (messageData.type === 'info') {
-          console.log(
-            '[WebSocket] info message received - do nothing:',
-            messageData
-          );
-          return;
-        }
-        if (!messageData.isValid) {
-          console.error('[WebSocket] invalid message received:', messageData);
-          return;
-        }
-
-        const messageContent = parseMessageContent(messageData.content);
-        console.log('[WebSocket] messageContent:', messageContent);
-        if (messageContent.id < 0) {
-          console.error('[WebSocket] invalid id:', messageContent);
-          return;
-        }
-
-        if (messageContent.userId === auth.user?.id) {
-          console.log('[WebSocket] message is from self, ignoring');
-          return;
-        }
-
-        setData(messageContent);
+      // Send authentication message
+      const authMessage = {
+        type: 'authenticate' as const,
+        token: auth.user?.jwt ?? '',
+        timestamp: Date.now(),
+        message: 'websocket client connection request',
       };
+      socket.send(JSON.stringify(authMessage));
     };
 
-    socket.onmessage = (event: MessageEvent<string>) => {
-      console.log('[WebSocket] message received:', event.data);
-    };
+    socket.onmessage = handleMessage;
 
-    // on close should update isConnected to false and retry connection
-    socket.onclose = async (event: CloseEvent) => {
-      console.log('[WebSocket] connection closed', event);
+    socket.onclose = async (event) => {
+      console.log(`[WebSocket][${socket.name}] connection closed`, event);
+      console.log(
+        `[WebSocket][${socket.name}] socketRef.current`,
+        socketRef.current?.name
+      );
+      // If the socketRef.current is not the same as the socket, then we need to skip the cleanup
+      if (socketRef.current !== socket) {
+        console.log(
+          `[WebSocket][${socket.name}] socketRef.current is not the same as the socket, skipping`
+        );
+        return;
+      }
+
+      socketRef.current = null;
       setIsConnected(false);
-      socketRef.current = null; // Clear the ref when connection is closed
 
-      // connection closed with code 1006 likely due to token expiration
       if (event.code === 1006) {
         console.log(
-          '[WebSocket] connection closed with code 1006 likely due to token expiration'
+          `[WebSocket][${socket.name}] connection closed with code 1006, checking tokens`,
+          auth.user
         );
-        // Check if webSocket token or jwt token is expired
-        const jwtTokenExpiryEpoch = auth.user?.expiryEpoch;
-        const webSocketTokenExpiryEpoch = auth.user?.webSocketTokenExpiryEpoch;
-        const userID = auth.user?.id;
-        if (userID && jwtTokenExpiryEpoch && webSocketTokenExpiryEpoch) {
-          const currentEpoch = Date.now();
-          if (currentEpoch > webSocketTokenExpiryEpoch) {
-            console.log(
-              '[WebSocket] webSocket token is expired => refreshing tokens'
-            );
+        const currentEpoch = Date.now();
+
+        const isTokenExpired =
+          // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
+          (auth.user?.expiryEpoch && currentEpoch > auth.user.expiryEpoch) ||
+          (auth.user?.webSocketTokenExpiryEpoch &&
+            currentEpoch > auth.user.webSocketTokenExpiryEpoch);
+
+        const foo =
+          auth.user?.expiryEpoch && currentEpoch > auth.user.expiryEpoch;
+        const bar =
+          auth.user?.webSocketTokenExpiryEpoch &&
+          currentEpoch > auth.user.webSocketTokenExpiryEpoch;
+
+        console.log('[WebSocket] foo', foo);
+        console.log('[WebSocket] bar', bar);
+
+        if (isTokenExpired) {
+          console.log(
+            `[WebSocket][${socket.name}] user token expired, refreshing`
+          );
+          try {
             await auth.update();
-          } else if (currentEpoch > jwtTokenExpiryEpoch) {
-            console.log(
-              '[WebSocket] jwt token is expired => refreshing tokens'
-            );
-            await auth.update();
+            setRetryAttempt(0);
+            return;
+          } catch (error) {
+            console.error('Failed to update user', error);
           }
         } else {
-          console.log('[WebSocket] no userID or tokens found');
+          console.log(
+            `[WebSocket][${socket.name}] user token not expired, not refreshing`
+          );
         }
-
-        setIsConnected(false);
-        socketRef.current = null; // Clear the ref when connection is closed
       }
 
-      // retry connection
       if (retryAttempt < retryAttempts) {
-        console.log('[WebSocket] retrying connection');
-        setTimeout(() => {
-          setRetryAttempt(retryAttempt + 1);
-        }, retryInterval);
+        console.log(
+          `[WebSocket] retrying connection in ${retryInterval}ms (${retryAttempt + 1}/${retryAttempts})`
+        );
+        setTimeout(() => setRetryAttempt((prev) => prev + 1), retryInterval);
+      } else {
+        console.warn(
+          `[WebSocket][${socket.name}] max retries reached, giving up`
+        );
       }
     };
 
-    socket.onerror = (event: Event) => {
-      console.error('[WebSocket] error:', event);
+    socket.onerror = (event) => {
+      console.error(`[WebSocket][${socket.name}] error:`, event);
       setIsConnected(false);
-      socketRef.current?.close();
-      socketRef.current = null; // Clear the ref when connection is closed
+      socket.close();
     };
 
-    // terminate connection on unmount
     return () => {
-      console.log('[WebSocket] terminating connection');
       if (socketRef.current) {
-        socketRef.current.close();
+        console.log(
+          `[WebSocket][${socketRef.current.name}] cleaning up connection`
+        );
+        if (socketRef.current.readyState === WebSocket.OPEN) {
+          console.log(
+            `[WebSocket][${socketRef.current.name}] closing connection`
+          );
+          socketRef.current.close();
+        }
         socketRef.current = null;
       }
     };
-  }, [
-    auth,
-    auth.user?.id,
-    auth.user?.webSocketToken,
-    auth.user?.webSocketTokenExpiryEpoch,
-    retryAttempt,
-    retryAttempts,
-    retryInterval,
-    url,
-  ]);
+  }, [auth, url, handleMessage, retryAttempt, retryAttempts, retryInterval]);
+
+  useEffect(() => {
+    console.log('[WebSocket] === useEffect ===');
+    const cleanup = connect();
+    return () => cleanup?.();
+  }, [connect]);
+
+  const send = useCallback(
+    (_data: Message) => {
+      if (!socketRef.current || !auth.user?.jwt || !auth.user.webSocketToken) {
+        return false;
+      }
+
+      const message = {
+        type: 'message' as const,
+        message: _data,
+        timestamp: Date.now(),
+      };
+
+      console.log(
+        `[WebSocket] sending message to ${socketRef.current.name}`,
+        message
+      );
+
+      try {
+        socketRef.current.send(JSON.stringify(message));
+        return true;
+      } catch (error) {
+        console.error('[WebSocket] error sending message:', error);
+        return false;
+      }
+    },
+    [auth.user?.jwt, auth.user?.webSocketToken]
+  );
 
   return { send, data, isConnected };
 }
 
 export default useWebSocket;
-
-function parseMessage(data: string) {
-  try {
-    // First try to parse as JSON
-    const parsedData = JSON.parse(data) as WebSocketMessage | string | null;
-
-    // Check if it matches our MessageData structure
-    if (
-      typeof parsedData === 'object' &&
-      parsedData !== null &&
-      'type' in parsedData &&
-      'isValid' in parsedData &&
-      'content' in parsedData
-    ) {
-      console.log(
-        '[WebSocket][parseMessage] messageData is object:',
-        parsedData
-      );
-      return parsedData;
-    }
-
-    // If it's valid JSON but doesn't match our structure,
-    // treat it as a plain message
-    return {
-      content:
-        typeof parsedData === 'string'
-          ? parsedData
-          : JSON.stringify(parsedData),
-      isValid: false,
-      type: 'unknown',
-    } as WebSocketMessage;
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  } catch (error) {
-    // If it's not valid JSON, treat it as a plain string message
-    // console.error('Error formatting message:', error);
-    return {
-      content: 'unknown',
-      isValid: false,
-      type: 'unknown',
-    } as WebSocketMessage;
-  }
-}
-
-function parseMessageContent(
-  data: Message | string | null | undefined
-): Message {
-  // Check if it matches our MessageData structure
-  console.log('[WebSocket][parseMessageContent] data:', data);
-
-  if (
-    typeof data === 'object' &&
-    data !== null &&
-    'id' in data &&
-    'content' in data &&
-    'createdAt' in data &&
-    'userId' in data &&
-    'conversationId' in data
-  ) {
-    console.log('[WebSocket][parseMessage] messageConent is object:', data);
-    return data;
-  }
-
-  if (typeof data === 'string') {
-    console.log('[WebSocket][parseMessage] messageContent is string:', data);
-    return {
-      id: -1,
-      content: data,
-      createdAt: new Date(),
-      userId: -1,
-      conversationId: -1,
-    };
-  }
-
-  return {
-    id: -1,
-    content: 'unknown',
-    createdAt: new Date(),
-    userId: -1,
-    conversationId: -1,
-  };
-}
