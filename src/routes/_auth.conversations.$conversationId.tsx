@@ -90,12 +90,10 @@ function ConversationSelectedComponent() {
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
 
-  // console.log('[ConversationSelectedComponent] === useWebSocket ===');
   const ws = useWebSocket({
     url: `ws://localhost:8080/conversations/${conversation?.id}`,
     retryAttempts: 1,
     retryInterval: 1000,
-    // token: auth.user?.jwt ?? '',
   });
   const messagesContainerRef = useRef<HTMLDivElement>(null);
 
@@ -157,28 +155,16 @@ function ConversationSelectedComponent() {
     return;
   };
 
-  // useEffect(() => {
-  //   console.log('useEffect ws.connected', ws.isConnected);
-  //   if (ws.isConnected && ws.send) {
-  //     const message: Message = {
-  //       content: `Hello from ${auth.user?.username}`,
-  //       createdAt: new Date(),
-  //       userId: auth.user?.id ?? 0,
-  //       conversationId: conversation?.id ?? 0,
-  //     };
-
-  //     ws.send(message);
-  //   }
-  //   // eslint-disable-next-line react-hooks/exhaustive-deps
-  // }, [ws.isConnected, auth.user?.username]);
-
   useEffect(() => {
-    // console.log('useEffect ws.data', ws.data);
     if (ws.data) {
       const message = ws.data;
+      if (messages.some((m) => m.id === message.id)) {
+        return;
+      }
+
       setMessages((prevMessages) => [message, ...prevMessages]);
     }
-  }, [ws.data]);
+  }, [messages, ws.data]);
 
   useEffect(() => {
     scrollToBottom();

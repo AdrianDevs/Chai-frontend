@@ -23,8 +23,6 @@ const axiosInstance = axios.create({
 
 // Request interceptor to add headers
 axiosInstance.interceptors.request.use((config) => {
-  // console.log('Request interceptor');
-
   const isTokenRefresh = config.url === '/auth/refresh-tokens';
   Object.assign(config.headers, getHeaders(isTokenRefresh));
   return config;
@@ -43,7 +41,7 @@ axiosInstance.interceptors.response.use(
   },
   async (error) => {
     const axiosError = error as AxiosError;
-    console.log('axiosError', axiosError);
+    console.error('axiosError', axiosError);
 
     const originalRequest = axiosError.config as CustomAxiosRequestConfig;
 
@@ -53,9 +51,6 @@ axiosInstance.interceptors.response.use(
       originalRequest._retry !== true &&
       originalRequest.url !== '/auth/refresh-tokens'
     ) {
-      console.log('axiosError.response?.status', axiosError.response.status);
-      console.log('originalRequest._retry', originalRequest._retry);
-      console.log('originalRequest.url', originalRequest.url);
       originalRequest._retry = true;
       try {
         const userID = getStoredUser()?.id;

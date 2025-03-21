@@ -29,62 +29,48 @@ function useWebSocket({
   const socketRef = useRef<NamedWebSocket | null>(null);
   const auth = useAuth();
 
-  const handleMessage = useCallback(
-    (event: MessageEvent<string>) => {
-      console.log('[WebSocket] message received:', event.data);
-      const message = parseWebSocketMessage(event.data);
-      console.log('[WebSocket] parsed message:', message);
+  const handleMessage = useCallback((event: MessageEvent<string>) => {
+    const message = parseWebSocketMessage(event.data);
 
-      switch (message.type) {
-        case 'message':
-          if (
-            message.content &&
-            typeof message.content === 'object' &&
-            'userId' in message.content
-          ) {
-            const chatMessage = message.content as Message;
-            if (chatMessage.userId === auth.user?.id) {
-              console.log('[WebSocket] message is from self, ignoring');
-              return;
-            }
-            setData(chatMessage);
-          }
-          break;
-        case 'error':
-          console.error(
-            '[WebSocket] error message received:',
-            message.content,
-            message.message
-          );
-          break;
-        case 'info':
-          console.log('[WebSocket] info message received:', message.content);
-          break;
-        case 'authenticate':
-          console.log(
-            '[WebSocket] authenticate message received:',
-            message.content
-          );
-          break;
-        case 'unknown':
-          console.warn(
-            '[WebSocket] unknown message received:',
-            message.content
-          );
-          break;
-      }
-    },
-    [auth.user?.id]
-  );
+    switch (message.type) {
+      case 'message':
+        if (
+          message.content &&
+          typeof message.content === 'object' &&
+          'userId' in message.content
+        ) {
+          const chatMessage = message.content as Message;
+          setData(chatMessage);
+        }
+        break;
+      case 'error':
+        console.error(
+          '[WebSocket] error message received:',
+          message.content,
+          message.message
+        );
+        break;
+      case 'info':
+        console.log('[WebSocket] info message received:', message.content);
+        break;
+      case 'authenticate':
+        console.log(
+          '[WebSocket] authenticate message received:',
+          message.content
+        );
+        break;
+      case 'unknown':
+        console.warn('[WebSocket] unknown message received:', message.content);
+        break;
+      default:
+        console.warn('[WebSocket] unknown message type received: unknown');
+        break;
+    }
+  }, []);
 
   const connect = useCallback(() => {
-    // Don't create a new connection if we already have one
     console.log('[WebSocket] === connect ===');
-    console.log(
-      '[WebSocket] socketRef.current?.readyState:',
-      socketRef.current?.readyState
-    );
-
+    // Don't create a new connection if we already have one
     if (
       socketRef.current?.readyState === WebSocket.OPEN ||
       socketRef.current?.readyState === WebSocket.CONNECTING
@@ -107,21 +93,8 @@ function useWebSocket({
     console.log(`[WebSocket][${socket.name}] created new socket`);
 
     socket.onopen = () => {
-      console.group(`[WebSocket][${socket.name}] connection opened`);
-      console.log(`[WebSocket][${socket.name}] readyState`, socket.readyState);
-      console.log(
-        `[WebSocket][${socket.name}] socketRef.current.name`,
-        socketRef.current?.name
-      );
-      console.log(
-        `[WebSocket][${socket.name}] socketRef.current.readyState`,
-        socketRef.current?.readyState
-      );
-      console.groupEnd();
-
       // If socket and socketRef.current are not the same, and socket is open,
-      // and socketRef.current is either open or connecting,
-      // then we need to close the open socket
+      // and socketRef.current is either open or connecting, then we need to close the open socket
       if (
         socketRef.current &&
         socket !== socketRef.current &&
@@ -130,7 +103,7 @@ function useWebSocket({
           socketRef.current.readyState === WebSocket.CONNECTING)
       ) {
         console.log(
-          `[WebSocket][${socket.name}] closing webSocket ${socket.name}`
+          `[WebSocket][${socket.name}] is a duplicate of ${socketRef.current.name}, closing duplicate webSocket`
         );
         socket.close();
         return;
@@ -151,23 +124,18 @@ function useWebSocket({
 
     socket.onclose = async (event) => {
       console.log(`[WebSocket][${socket.name}] connection closed`, event);
-      console.log(
-        `[WebSocket][${socket.name}] socketRef.current`,
-        socketRef.current?.name
-      );
       // If the socketRef.current is not the same as the socket, then we need to skip the cleanup
       if (socketRef.current !== socket) {
         console.log(
-          `[WebSocket][${socket.name}] socketRef.current is not the same as the socket, skipping`
+          `[WebSocket][${socket.name}] socketRef.current is not the same as the socket, skipping cleanup`
         );
         return;
       }
-
       socketRef.current = null;
       setIsConnected(false);
 
       if (event.code === 1006) {
-        console.log(
+        console.warn(
           `[WebSocket][${socket.name}] connection closed with code 1006, checking tokens`,
           auth.user
         );
@@ -178,15 +146,6 @@ function useWebSocket({
           (auth.user?.expiryEpoch && currentEpoch > auth.user.expiryEpoch) ||
           (auth.user?.webSocketTokenExpiryEpoch &&
             currentEpoch > auth.user.webSocketTokenExpiryEpoch);
-
-        const foo =
-          auth.user?.expiryEpoch && currentEpoch > auth.user.expiryEpoch;
-        const bar =
-          auth.user?.webSocketTokenExpiryEpoch &&
-          currentEpoch > auth.user.webSocketTokenExpiryEpoch;
-
-        console.log('[WebSocket] foo', foo);
-        console.log('[WebSocket] bar', bar);
 
         if (isTokenExpired) {
           console.log(
@@ -241,7 +200,6 @@ function useWebSocket({
   }, [auth, url, handleMessage, retryAttempt, retryAttempts, retryInterval]);
 
   useEffect(() => {
-    console.log('[WebSocket] === useEffect ===');
     const cleanup = connect();
     return () => cleanup?.();
   }, [connect]);
