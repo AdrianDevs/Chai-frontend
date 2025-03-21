@@ -88,7 +88,8 @@ $ make up
 - Components with `DaisyUI`
 - Routing with `Tanstack Router`
 - State management with `Tanstack Query` and `Tanstack Store`
-- Forms with `Tanstack Forms` and `Zod`
+- Forms with `Tanstack Forms`
+- Authentication with `JWT Tokens` and `Refresh Tokens`
 - Unit testing with `Vitest`
 - End-to-end testing with `Playwright`
 
@@ -103,10 +104,14 @@ $ make up
 
 ## TODO
 
-- JWT refresh tokens
-- Webhooks
+- Websockets
 - Unit tests
 - End-to-end tests
 - Build and run as prod
 - Dockerise
 - Deploy to prod
+- File hosting
+- Big data and webhooks
+- Email verifications
+- SSO
+- Sentry

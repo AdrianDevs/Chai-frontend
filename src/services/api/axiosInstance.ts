@@ -23,8 +23,7 @@ const axiosInstance = axios.create({
 
 // Request interceptor to add headers
 axiosInstance.interceptors.request.use((config) => {
-  const isTokenRefresh = config.url === '/auth/refresh-token';
-
+  const isTokenRefresh = config.url === '/auth/refresh-tokens';
   Object.assign(config.headers, getHeaders(isTokenRefresh));
   return config;
 });
@@ -42,6 +41,7 @@ axiosInstance.interceptors.response.use(
   },
   async (error) => {
     const axiosError = error as AxiosError;
+    console.error('axiosError', axiosError);
 
     const originalRequest = axiosError.config as CustomAxiosRequestConfig;
 
@@ -49,7 +49,7 @@ axiosInstance.interceptors.response.use(
     if (
       axiosError.response?.status === 401 &&
       originalRequest._retry !== true &&
-      originalRequest.url !== '/auth/refresh-token'
+      originalRequest.url !== '/auth/refresh-tokens'
     ) {
       originalRequest._retry = true;
       try {
@@ -59,21 +59,17 @@ axiosInstance.interceptors.response.use(
           return Promise.reject(axiosError);
         }
 
-        const newToken = await API.refreshAccessToken(userID); // Refresh the token
+        const newTokensResponse = await API.refreshTokens(userID); // Refresh the token
 
-        if (!newToken.data?.token) {
-          console.error('No new token received from refresh token API');
+        if (!newTokensResponse.data) {
+          console.error('No new tokens received from refresh token API');
           return Promise.reject(axiosError);
         }
 
-        updateStoredUser({
-          jwt: newToken.data.token,
-          refreshToken: newToken.data.refreshToken,
-          refreshTokenExpires: newToken.data.refreshTokenExpires,
-        });
+        updateStoredUser(newTokensResponse.data);
 
         Object.assign(originalRequest.headers, {
-          Authorization: newToken.data.token,
+          Authorization: 'Bearer ' + newTokensResponse.data.token,
         });
 
         return axiosInstance(originalRequest); // Retry the original request

@@ -5,6 +5,7 @@ let user: AuthUser | null = null;
 
 export function getStoredUser() {
   if (!user) {
+    console.log('getStoredUser - using local storage');
     const _user = localStorage.getItem(userKey);
     user = _user ? (JSON.parse(_user) as AuthUser) : null;
   }
@@ -28,5 +29,6 @@ export function clearStoredUser() {
 export function updateStoredUser(_user: Partial<AuthUser>) {
   if (!user) return;
   user = { ...user, ..._user } as AuthUser;
+  console.log('updateStoredUser', user);
   localStorage.setItem(userKey, JSON.stringify(user));
 }
