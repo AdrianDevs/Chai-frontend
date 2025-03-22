@@ -52,3 +52,5 @@ if (!rootElement.innerHTML) {
     </StrictMode>
   );
 }
+
+export default App;

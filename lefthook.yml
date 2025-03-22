@@ -12,8 +12,8 @@ pre-commit:
     gitLeaks:
       run: npm run gitleaks
     # TODO add unit and e2e tests
-    # test:
-    #   run: npm run test:related {staged_files}
+    test:
+      run: npm run test:related {staged_files}
 pre-push:
   parallel: true
   commands:
