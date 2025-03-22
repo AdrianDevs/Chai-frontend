@@ -20,6 +20,10 @@
     "test:ui": "vitest --ui",
     "test:debug": "vitest --debug",
     "test:run": "vitest --run",
+    "e2e": "playwright test",
+    "e2e:watch": "playwright test --watch",
+    "e2e:ui": "playwright test --ui",
+    "e2e:chrome": "playwright test --project=chromium",
     "gitleaks": "gitleaks detect --verbose --source ."
   },
   "keywords": [
@@ -48,6 +52,7 @@
     "@commitlint/cli": "^19.7.1",
     "@commitlint/config-conventional": "^19.7.1",
     "@eslint/js": "^9.19.0",
+    "@playwright/test": "^1.51.1",
     "@tailwindcss/typography": "^0.5.16",
     "@tanstack/config": "^0.16.3",
     "@tanstack/router-devtools": "^1.111.7",
@@ -55,6 +60,7 @@
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.2.0",
     "@testing-library/user-event": "^14.6.1",
+    "@types/node": "^22.13.11",
     "@types/react": "^19.0.8",
     "@types/react-dom": "^19.0.3",
     "@vitejs/plugin-react-swc": "^3.5.0",
